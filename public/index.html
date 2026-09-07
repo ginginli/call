@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>班级喊话系统 · 登录</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="auth-bg">
+  <div class="auth-box">
+    <div class="brand">
+      <div class="logo">📢</div>
+      <div>
+        <h1>班级喊话系统</h1>
+        <p>网页发通知 · 教室自动全屏播报</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tabs">
+        <button id="tabLogin" class="on" onclick="showTab('login')">登录</button>
+        <button id="tabReg" onclick="showTab('reg')">注册账号</button>
+        <button id="tabForgot" onclick="showTab('forgot')">忘记密码</button>
+      </div>
+
+      <!-- 登录 -->
+      <form class="auth-pane" id="paneLogin" onsubmit="return doLogin(event)">
+        <h2>登录后台</h2>
+        <p class="sub">演示账号: demo / demo123</p>
+        <label class="lbl">用户名</label>
+        <input class="inp" id="liUser" autocomplete="username" required>
+        <label class="lbl">密码</label>
+        <input class="inp" id="liPass" type="password" autocomplete="current-password" required>
+        <div style="height:18px"></div>
+        <button class="btn btn-pri btn-block" type="submit">登 录</button>
+      </form>
+
+      <!-- 注册 -->
+      <form class="auth-pane hide" id="paneReg" onsubmit="return doReg(event)">
+        <h2>注册账号</h2>
+        <p class="sub">第一次使用需激活卡号, 注册成功自动进入后台</p>
+        <label class="lbl">激活卡号</label>
+        <input class="inp mono" id="rgCard" placeholder="例如 OWN-XXXX-XXXX" style="letter-spacing:1px">
+        <label class="lbl">登录用户名(请牢记, 找回密码需用到)</label>
+        <input class="inp" id="rgUser" maxlength="20" required>
+        <label class="lbl">密码(至少 6 位)</label>
+        <input class="inp" id="rgPass" type="password" required>
+        <label class="lbl">确认密码</label>
+        <input class="inp" id="rgPass2" type="password" required>
+        <div style="height:18px"></div>
+        <button class="btn btn-pri btn-block" type="submit">立即注册</button>
+        <p class="sub" style="margin:12px 0 0;line-height:1.6" id="rgTip">普通激活卡注册后自带 2 个班级; 协同授权码(CO-开头)注册的是协同账号, 不能新建班级</p>
+      </form>
+
+      <!-- 忘记密码 -->
+      <form class="auth-pane hide" id="paneForgot" onsubmit="return doForgot(event)">
+        <h2>找回密码</h2>
+        <p class="sub">输入用户名 + 注册时使用的激活卡号</p>
+        <label class="lbl">用户名</label>
+        <input class="inp" id="foUser" required>
+        <label class="lbl">激活卡号</label>
+        <input class="inp mono" id="foCard" placeholder="OWN-XXXX-XXXX">
+        <label class="lbl">新密码(至少 6 位)</label>
+        <input class="inp" id="foPass" type="password" required>
+        <div style="height:18px"></div>
+        <button class="btn btn-pri btn-block" type="submit">重置密码</button>
+      </form>
+    </div>
+
+    <div class="card demo-list" id="demoBox">
+      <div>加载演示激活卡号…</div>
+    </div>
+  </div>
+</div>
+
+<script src="/common.js"></script>
+<script>
+function showTab(t) {
+  ['login', 'reg', 'forgot'].forEach((k) => {
+    document.getElementById('pane' + k[0].toUpperCase() + k.slice(1)).classList.toggle('hide', k !== t);
+    document.getElementById('tab' + k[0].toUpperCase() + k.slice(1)).classList.toggle('on', k === t);
+  });
+}
+
+async function doLogin(e) {
+  e.preventDefault();
+  const btn = e.target.querySelector('button[type=submit]');
+  btn.disabled = true;
+  try {
+    await api('POST', '/api/auth/login', { username: liUser.value.trim(), password: liPass.value });
+    location.href = '/app';
+  } catch (err) {
+    toast(err.message, 'err'); btn.disabled = false;
+  }
+}
+
+async function doReg(e) {
+  e.preventDefault();
+  if (rgPass.value.length < 6) return toast('密码至少 6 位', 'err');
+  if (rgPass.value !== rgPass2.value) return toast('两次输入的密码不一致', 'err');
+  const btn = e.target.querySelector('button[type=submit]');
+  btn.disabled = true;
+  try {
+    await api('POST', '/api/auth/register', {
+      username: rgUser.value.trim(), password: rgPass.value, cardCode: rgCard.value.trim(),
+    });
+    location.href = '/app';
+  } catch (err) {
+    toast(err.message, 'err'); btn.disabled = false;
+  }
+}
+
+async function doForgot(e) {
+  e.preventDefault();
+  if (foPass.value.length < 6) return toast('新密码至少 6 位', 'err');
+  const btn = e.target.querySelector('button[type=submit]');
+  btn.disabled = true;
+  try {
+    await api('POST', '/api/auth/forgot', { username: foUser.value.trim(), cardCode: foCard.value.trim(), password: foPass.value });
+    toast('密码已重置, 请重新登录', 'ok');
+    showTab('login');
+  } catch (err) {
+    toast(err.message, 'err');
+  } finally { btn.disabled = false; }
+}
+
+(async function loadDemoCards() {
+  try {
+    const { cards } = await api('GET', '/api/auth/demo-cards');
+    const box = document.getElementById('demoBox');
+    if (!cards || !cards.length) { box.remove(); return; }
+    const owner = cards.filter((c) => c.type === 'owner').map((c) => c.code);
+    const co = cards.filter((c) => c.type === 'co').map((c) => c.code);
+    const row = (a) => a.map((c) => `<code>${esc(c)}</code>`).join(' ');
+    box.innerHTML = '<div style="font-weight:600;color:#374151;margin-bottom:6px">演示激活卡号(注册新账号用)</div>' +
+      '<div>普通激活卡(含 2 个班级):<br>' + row(owner) + '</div>' +
+      '<div style="margin-top:6px">协同授权码(协同账号):<br>' + row(co) + '</div>' +
+      '<div style="margin-top:8px">仅用于本机演示; 正式使用需联系客服购买。忘记密码时也要用到卡号。</div>';
+  } catch (e) { /* 无需处理 */ }
+})();
+</script>
+</body>
+</html>

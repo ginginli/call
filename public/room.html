@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>班级喊话 · 教室端</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="room-stage">
+
+  <!-- 顶部 -->
+  <div class="room-top" id="topBar">
+    <div class="row" style="gap:10px">
+      <span style="font-weight:700;font-size:16px">📢 教室喊话端</span>
+      <span class="chip" id="stateChip"><span class="dot gray" id="stateDot"></span><span id="stateText">未连接</span></span>
+    </div>
+    <div class="row" style="flex-wrap:wrap;gap:8px">
+      <button class="btn btn-sm" id="btnSound" onclick="toggleSound()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">🔊 声音开</button>
+      <button class="btn btn-sm" onclick="toggleFull()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⛶ 全屏</button>
+      <button class="btn btn-sm" onclick="doTest()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">测试播报</button>
+      <button class="btn btn-sm btn-danger" onclick="doUnbind()">解绑</button>
+      <button class="btn btn-sm" id="btnDesktopExit" onclick="desktopQuit()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⏻ 退出演示屏</button>
+    </div>
+  </div>
+
+  <!-- 绑定 -->
+  <div class="room-main" id="setupPanel">
+    <form class="bind-card" onsubmit="return doBind(event)">
+      <h2>绑定班级</h2>
+      <p class="sub">请老师在后台创建班级后，将 <b>绑定码</b> 填入此处。绑定一次即可，之后开机自动连接。</p>
+      <label class="lbl" style="color:#c7cddd">班级绑定码</label>
+      <input class="inp mono" id="codeInp" maxlength="12" placeholder="例如 DEMO8YQZ" autocomplete="off" required>
+      <div style="height:16px"></div>
+      <button class="btn btn-pri btn-block" type="submit" id="bindBtn">连接并开始接收通知</button>
+      <p class="sub" style="margin:14px 0 0">提示：请先点击一次页面按钮以启用语音播报（浏览器限制）。</p>
+    </form>
+  </div>
+
+  <!-- 等待 -->
+  <div class="room-main hide" id="mainPanel">
+    <div class="waiting" style="text-align:center">
+      <span class="chip" style="font-size:18px;padding:10px 20px">
+        <span class="dot" id="mainDot"></span>
+        <span id="className">正在连接…</span>
+      </span>
+    </div>
+    <div class="big-clock" id="clock">--:--</div>
+    <div class="pulse" style="letter-spacing:6px;color:#a5b4fc;font-size:18px">正在监听通知</div>
+    <div id="unlockPill" class="chip hide" onclick="unlockAudio()" style="cursor:pointer;border-color:#fbbf24;color:#fde68a">
+      🔊 点击此处开启语音播报
+    </div>
+    <div style="color:#6b7280;font-size:13px" id="roomHint">收到老师通知后会自动全屏弹窗并语音播报</div>
+  </div>
+</div>
+
+<!-- 通知全屏弹层 -->
+<div class="ov hide" id="overlay">
+  <div class="ov-inner">
+    <div class="ov-head" id="ovHead">
+      <div class="ov-tag" id="ovTag"></div>
+      <button class="ov-x" onclick="closeOverlay()">✕</button>
+    </div>
+    <div class="ov-body"><div class="txt" id="ovText"></div></div>
+    <div class="ov-foot">
+      <span id="ovFrom"></span>
+      <span>班级喊话系统 · 点击右上角关闭</span>
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/common.js"></script>
+<script>
+/* ---------- 状态 ---------- */
+let code = localStorage.getItem('room_code') || '';
+let soundOn = localStorage.getItem('room_sound') !== '0';
+let audioUnlocked = false;
+let className = '';
+let classColor = '#4f46e5';
+let overlayTimer = null;
+let lastRead = '';
+
+const socket = io();
+
+/* ---------- 语音 ---------- */
+let zhVoice = null;
+function pickVoice() {
+  try {
+    const vs = speechSynthesis.getVoices();
+    zhVoice = vs.find((v) => /^zh/i.test(v.lang)) || vs.find((v) => /Chinese/i.test(v.name)) || null;
+  } catch (e) { zhVoice = null; }
+}
+if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+
+function unlockAudio() {
+  audioUnlocked = true;
+  document.getElementById('unlockPill').classList.add('hide');
+  try { speechSynthesis.resume(); } catch (e) {}
+}
+document.addEventListener('pointerdown', () => {
+  if (!audioUnlocked && className) { unlockAudio(); }
+}, { once: false });
+
+function speak(text) {
+  if (!soundOn) return;
+  if (!window.speechSynthesis || !audioUnlocked) return;
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'zh-CN';
+    u.rate = 1.05;
+    if (zhVoice) u.voice = zhVoice;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  } catch (e) { /* 忽略 */ }
+}
+
+function beep() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new Ctx();
+    [880, 1320].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'sine'; o.frequency.value = f;
+      const t = ctx.currentTime + i * 0.18;
+      g.gain.setValueAtTime(0.001, t);
+      g.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+      o.start(t); o.stop(t + 0.18);
+    });
+  } catch (e) { /* 忽略 */ }
+}
+
+/* ---------- 绑定 / 状态 ---------- */
+function setState(txt, ok) {
+  document.getElementById('stateText').textContent = txt;
+  const d = document.getElementById('stateDot');
+  d.className = 'dot';
+  if (ok === true) d.classList.add('on');
+  else if (ok === false) { d.classList.add('gray'); }
+}
+
+function showSetup() {
+  document.getElementById('mainPanel').classList.add('hide');
+  document.getElementById('setupPanel').classList.remove('hide');
+  setState('未绑定', false);
+}
+
+function showMain() {
+  document.getElementById('setupPanel').classList.add('hide');
+  document.getElementById('mainPanel').classList.remove('hide');
+}
+
+async function doBind(e) {
+  e.preventDefault();
+  const val = document.getElementById('codeInp').value.trim().toUpperCase();
+  if (!val) return;
+  code = val;
+  unlockAudio(); // 用户点击 = 允许语音
+  setState('正在绑定…', null);
+  document.getElementById('bindBtn').disabled = true;
+  socket.emit('bind', { code });
+}
+
+socket.on('connect', () => {
+  if (code) { setState('正在重连…', null); socket.emit('bind', { code }); }
+});
+socket.on('disconnect', () => {
+  if (code) setState('网络断开，重连中…', false);
+});
+
+socket.on('bound', (r) => {
+  document.getElementById('bindBtn').disabled = false;
+  if (r.ok) {
+    code = r.code || code;
+    localStorage.setItem('room_code', code);
+    className = r.className;
+    classColor = r.color || classColor;
+    document.getElementById('className').textContent = '已绑定 · ' + className;
+    document.getElementById('mainDot').classList.remove('gray');
+    document.getElementById('roomHint').textContent = '班级【' + className + '】已绑定，收到通知自动全屏播报。';
+    showMain();
+    setState('在线 · 接收中', true);
+    if (!audioUnlocked) document.getElementById('unlockPill').classList.remove('hide');
+    toast('绑定成功：' + className, 'ok');
+    tickClock(); setInterval(tickClock, 1000);
+  } else {
+    code = ''; localStorage.removeItem('room_code');
+    showSetup();
+    setState('绑定失败', false);
+    toast(r.error || '绑定失败', 'err');
+  }
+});
+
+socket.on('notify', (m) => {
+  beep();
+  showNotify(m);
+  if (m.voice !== false) speak(m.content);
+});
+
+socket.on('rebind', (m) => {
+  code = ''; localStorage.removeItem('room_code');
+  closeOverlay();
+  speechSynthesis.cancel && speechSynthesis.cancel();
+  showSetup();
+  toast((m && m.reason) || '绑定码已更新，请重新绑定', 'err');
+});
+
+/* ---------- 通知弹层 ---------- */
+function showNotify(m) {
+  lastRead = m.content;
+  document.getElementById('ovHead').style.background = m.color || '#e11d48';
+  document.getElementById('ovTag').textContent = '📢 ' + (m.className || '班级通知');
+  document.getElementById('ovText').textContent = m.content;
+  document.getElementById('ovFrom').textContent = '来源：' + (m.fromName || '') + ' · ' + (m.sentAt ? fmtTime(m.sentAt) : '');
+  const ov = document.getElementById('overlay');
+  ov.classList.remove('hide');
+  if (document.fullscreenEnabled) { try { if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); } catch (e) {} }
+  clearTimeout(overlayTimer);
+  overlayTimer = setTimeout(closeOverlay, Math.max(12000, Math.min(m.content.length * 400, 60000)));
+}
+function closeOverlay() {
+  document.getElementById('overlay').classList.add('hide');
+  clearTimeout(overlayTimer);
+}
+
+/* ---------- 按钮 ---------- */
+function toggleSound() {
+  soundOn = !soundOn;
+  localStorage.setItem('room_sound', soundOn ? '1' : '0');
+  document.getElementById('btnSound').textContent = soundOn ? '🔊 声音开' : '🔇 声音关';
+  if (soundOn) unlockAudio();
+  else { try { speechSynthesis.cancel(); } catch (e) {} }
+  toast(soundOn ? '语音播报已开启' : '语音播报已关闭', 'ok');
+}
+
+function doTest() {
+  unlockAudio();
+  if (className) {
+    beep();
+    showNotify({ content: '测试播报：声音正常，通知正常接收。', className, color: '#2563eb', fromName: '本机测试', sentAt: null, voice: true });
+    speak('测试播报：声音正常，通知正常接收。');
+  } else {
+    toast('请先绑定班级', 'err');
+  }
+}
+
+function doUnbind() {
+  code = ''; className = '';
+  localStorage.removeItem('room_code');
+  closeOverlay();
+  showSetup();
+  toast('已解绑', 'ok');
+}
+
+function toggleFull() {
+  try {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen();
+  } catch (e) {}
+}
+
+function desktopQuit() {
+  if (window.desktopApp) window.desktopApp.quit();
+  else toggleFull();
+}
+
+/* 桌面演示屏壳里显示"退出演示屏"按钮 */
+if (window.desktopApp) {
+  const b = document.getElementById('btnDesktopExit');
+  if (b) b.style.display = '';
+}
+
+function tickClock() {
+  const el = document.getElementById('clock');
+  const d = new Date();
+  el.textContent = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
+}
+
+/* ---------- 启动 ---------- */
+if (soundOn) document.getElementById('btnSound').textContent = '🔊 声音开';
+else document.getElementById('btnSound').textContent = '🔇 声音关';
+if (code) {
+  showMain();
+  setState('正在连接…', null);
+  document.getElementById('className').textContent = '正在连接…';
+  socket.emit('bind', { code }); // socket 可能未就绪, 依赖 connect 事件兜底
+  // 若已连接过(connect已触发)不会再次触发, 这里做兼容
+  if (socket.connected) socket.emit('bind', { code });
+} else {
+  showSetup();
+}
+tickClock();
+setInterval(tickClock, 1000);
+</script>
+</body>
+</html>

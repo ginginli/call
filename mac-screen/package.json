@@ -1,0 +1,16 @@
+{
+  "name": "class-call-mac-screen",
+  "version": "1.0.0",
+  "private": true,
+  "description": "班级喊话 · Mac 教室演示屏(桌面壳,加载本机/局域网的教室端页面)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac dir"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^44.2.0"
+  }
+}

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>班级喊话 · 演示屏</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b1020;color:#e5e7eb;
+    font-family:-apple-system,"PingFang SC",sans-serif;
+    display:flex;align-items:center;justify-content:center}
+  .box{text-align:center;padding:40px}
+  .icon{font-size:56px}
+  h1{font-size:22px;margin:16px 0 8px}
+  p{color:#9ca3af;line-height:1.7;margin:0 0 24px;font-size:14px}
+  button{background:#4f46e5;color:#fff;border:none;border-radius:10px;
+    padding:12px 32px;font-size:15px;cursor:pointer;margin:0 6px}
+  button.ghost{background:rgba(255,255,255,.1)}
+</style>
+</head>
+<body>
+  <div class="box">
+    <div class="icon">📡</div>
+    <h1>正在连接班级喊话服务…</h1>
+    <p id="why">本机服务(端口 3000)未就绪, 请确认已运行 <b>npm start</b>,<br>
+    或点下方按钮重试。</p>
+    <button onclick="window.desktopApp && window.desktopApp.retry()">重新连接</button>
+    <button class="ghost" onclick="window.desktopApp && window.desktopApp.quit()">退出</button>
+  </div>
+  <script>
+    try {
+      var q = new URLSearchParams(location.search);
+      var r = q.get('reason');
+      if (r) document.getElementById('why').textContent = decodeURIComponent(r) + '，请点下方按钮重试。';
+    } catch (e) {}
+  </script>
+</body>
+</html>
