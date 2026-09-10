@@ -23,3 +23,7 @@ npm-debug.log*
 
 # 部署临时目录
 .deploy_tmp/
+
+# 自动更新脚本产生的文件
+backups/
+.deploy-pkg-hash
