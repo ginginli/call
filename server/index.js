@@ -149,6 +149,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
 app.get('/app', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'app.html')));
 app.get('/room', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'room.html')));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'admin.html')));
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 /* ---- 认证 ---- */
@@ -230,6 +231,21 @@ app.post('/api/cards/generate', (req, res) => {
   }
   persist();
   res.json({ ok: true, codes: out });
+});
+
+/* 发卡后台: 查询库存(需发卡口令) */
+app.post('/api/cards/list', (req, res) => {
+  const { adminKey } = req.body || {};
+  if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: '发卡口令错误' });
+  const unused = db.cards.filter((c) => !c.usedBy);
+  res.json({
+    total: db.cards.length,
+    used: db.cards.length - unused.length,
+    unusedOwner: unused.filter((c) => c.type !== 'co').length,
+    unusedCo: unused.filter((c) => c.type === 'co').length,
+    usingDefaultKey: ADMIN_KEY === 'siyunx-admin',
+    cards: unused.slice(-60).reverse().map((c) => ({ code: c.code, type: c.type, createdAt: c.createdAt })),
+  });
 });
 
 /* ---- 账号与班级 ---- */

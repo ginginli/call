@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>发卡后台 · 班级喊话系统</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+  .admin-wrap { max-width: 880px; margin: 22px auto 60px; padding: 0 18px; display: flex; flex-direction: column; gap: 16px; }
+  .admin-card { padding: 18px 20px; }
+  .code-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .code-chip {
+    display: flex; align-items: center; gap: 8px; background: #f8f9ff;
+    border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px 7px 12px;
+  }
+  .code-chip b { font-size: 15px; letter-spacing: 2px; }
+  .stat { display: flex; gap: 26px; flex-wrap: wrap; }
+  .stat .n { font-size: 24px; font-weight: 800; line-height: 1.1; }
+  .tip { font-size: 12.5px; margin: 10px 0 0; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="mini-logo"><div class="logo">🎫</div><span>发卡后台</span></div>
+  <div class="row" style="gap:8px">
+    <span class="badge" id="keyTag">口令未验证</span>
+    <a class="btn btn-sm" href="/">返回登录页</a>
+  </div>
+</header>
+
+<div class="admin-wrap">
+
+  <!-- 口令 -->
+  <div class="card admin-card">
+    <h3 style="margin:0 0 10px;font-size:15px">① 输入发卡口令</h3>
+    <div class="row" style="gap:8px;flex-wrap:wrap">
+      <input class="inp grow" id="adminKey" type="password" placeholder="发卡口令 (CARD_KEY)" style="max-width:320px">
+      <button class="btn btn-sm" onclick="toggleKey()" id="eyeBtn">显示</button>
+      <button class="btn btn-pri btn-sm" onclick="checkStock()">验证并查看库存</button>
+    </div>
+    <p class="muted tip">口令就是服务端的环境变量 <code>CARD_KEY</code>，没设过的话默认是 <code>siyunx-admin</code>。口令只保存在本标签页，关掉就没了。</p>
+  </div>
+
+  <!-- 库存 -->
+  <div class="card admin-card hide" id="stockCard">
+    <div class="spread">
+      <h3 style="margin:0;font-size:15px">② 当前库存（还没被用掉的卡）</h3>
+      <button class="btn btn-sm" onclick="checkStock()">刷新</button>
+    </div>
+    <div class="stat" style="margin-top:14px">
+      <div><div class="n" id="stOwner">-</div><div class="muted" style="font-size:12px">普通激活卡</div></div>
+      <div><div class="n" id="stCo">-</div><div class="muted" style="font-size:12px">协同授权码</div></div>
+      <div><div class="n" id="stUsed">-</div><div class="muted" style="font-size:12px">已使用</div></div>
+    </div>
+    <div class="hide" id="defaultKeyWarn" style="margin-top:14px;padding:9px 12px;border-radius:10px;background:#fef3e2;color:#b45309;font-size:13px;line-height:1.6">
+      警告：服务器还在用默认口令 <b>siyunx-admin</b>，知道网址的人都能自己发卡。建议重启服务时加上 <code>CARD_KEY=自己的口令</code>（详见下方说明）。
+    </div>
+  </div>
+
+  <!-- 发卡 -->
+  <div class="card admin-card">
+    <h3 style="margin:0 0 4px;font-size:15px">③ 生成卡号</h3>
+    <p class="muted tip" style="margin-bottom:14px">普通激活卡：卖给老师，注册后自带 2 个班级。协同授权码：给协同老师用，能加入别人的班级、不能建班。</p>
+    <div class="row" style="gap:10px;flex-wrap:wrap">
+      <select class="inp sel" id="cardType" style="max-width:240px">
+        <option value="owner">普通激活卡（OWN- 开头）</option>
+        <option value="co">协同授权码（CO- 开头）</option>
+      </select>
+      <input class="inp" id="cardCount" type="number" min="1" max="50" value="5" style="max-width:110px">
+      <span class="muted" style="font-size:13px">张（1～50）</span>
+      <button class="btn btn-pri" id="genBtn" onclick="genCards()">生成卡号</button>
+    </div>
+  </div>
+
+  <!-- 结果 -->
+  <div class="card admin-card hide" id="resultCard">
+    <div class="spread" style="margin-bottom:12px">
+      <h3 style="margin:0;font-size:15px">④ 本次生成 <span id="resCount">0</span> 张</h3>
+      <div class="row" style="gap:8px">
+        <button class="btn btn-sm" onclick="copyAll()">复制全部</button>
+        <button class="btn btn-sm" onclick="clearResult()">清空</button>
+      </div>
+    </div>
+    <div class="code-grid" id="codeGrid"></div>
+    <p class="muted tip">把卡号发给老师 → 老师在<a href="/">登录页</a>点「注册账号」，填卡号 + 用户名 + 密码即可。一张卡只能注册一个账号，用过即失效。</p>
+  </div>
+
+</div>
+
+<script src="/common.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+let lastCodes = [];
+
+/* 进入页面时回填本标签页之前用过的口令 */
+const savedKey = sessionStorage.getItem('adminKey');
+if (savedKey) $('adminKey').value = savedKey;
+
+function keyOf() {
+  const k = ($('adminKey').value || '').trim();
+  if (!k) { toast('请先输入发卡口令', 'err'); return ''; }
+  return k;
+}
+
+function toggleKey() {
+  const el = $('adminKey');
+  const show = el.type === 'password';
+  el.type = show ? 'text' : 'password';
+  $('eyeBtn').textContent = show ? '隐藏' : '显示';
+}
+
+async function post(url, body) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* ignore */ }
+  if (!res.ok) throw new Error((data && data.error) || ('请求失败(' + res.status + ')'));
+  return data;
+}
+
+async function checkStock(silent) {
+  const k = keyOf();
+  if (!k) return;
+  try {
+    const d = await post('/api/cards/list', { adminKey: k });
+    sessionStorage.setItem('adminKey', k);
+    $('stockCard').classList.remove('hide');
+    $('keyTag').textContent = '口令已验证';
+    $('keyTag').className = 'badge badge-ok';
+    $('stOwner').textContent = d.unusedOwner;
+    $('stCo').textContent = d.unusedCo;
+    $('stUsed').textContent = d.used;
+    $('defaultKeyWarn').classList.toggle('hide', !d.usingDefaultKey);
+    if (!silent) toast('口令正确', 'ok');
+  } catch (e) {
+    $('keyTag').textContent = '口令未验证';
+    $('keyTag').className = 'badge';
+    if (!silent) toast(e.message, 'err');
+  }
+}
+
+async function genCards() {
+  const k = keyOf();
+  if (!k) return;
+  const type = $('cardType').value;
+  let count = Number($('cardCount').value) || 1;
+  count = Math.min(Math.max(count, 1), 50);
+  $('cardCount').value = count;
+  const btn = $('genBtn');
+  btn.disabled = true;
+  try {
+    const d = await post('/api/cards/generate', { adminKey: k, type, count });
+    sessionStorage.setItem('adminKey', k);
+    renderCodes(d.codes || [], type);
+    toast('已生成 ' + (d.codes || []).length + ' 张', 'ok');
+    checkStock(true); // 顺手刷新库存
+  } catch (e) {
+    toast(e.message, 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderCodes(codes, type) {
+  lastCodes = codes.slice();
+  $('resultCard').classList.remove('hide');
+  $('resCount').textContent = codes.length;
+  const isCo = type === 'co';
+  $('codeGrid').innerHTML = codes.map((c) => `
+    <div class="code-chip">
+      <b class="mono">${esc(c)}</b>
+      <span class="badge ${isCo ? 'badge-pri' : 'badge-ok'}" style="font-size:11px">${isCo ? '协同' : '普通'}</span>
+      <button class="btn btn-sm" onclick="copyOne('${esc(c)}')">复制</button>
+    </div>`).join('');
+}
+
+async function copyOne(code) {
+  toast((await copyText(code)) ? '已复制 ' + code : '请手动复制', 'ok');
+}
+
+async function copyAll() {
+  if (!lastCodes.length) return toast('还没有生成的卡号', 'err');
+  const ok = await copyText(lastCodes.join('\n'));
+  toast(ok ? '已复制全部 ' + lastCodes.length + ' 个卡号' : '请手动选择复制', ok ? 'ok' : 'err');
+}
+
+function clearResult() {
+  lastCodes = [];
+  $('codeGrid').innerHTML = '';
+  $('resultCard').classList.add('hide');
+}
+</script>
+</body>
+</html>
