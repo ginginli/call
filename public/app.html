@@ -276,7 +276,7 @@ function renderContent() {
       <span class="fold-open">展开 ▾</span>
     </summary>
     <div class="fold-body">
-      <p class="muted" style="margin:2px 0 10px;font-size:13px">对方先用 <b style="color:#374151">CO- 开头协同授权码</b> 注册协同账号；把你生成的<b>邀请码</b>发给对方，对方登录后在后台「加入班级」处输入邀请码即可加入本班。邀请码长期有效、可给多位老师使用，不需要时可点「作废」。</p>
+      <p class="muted" style="margin:2px 0 10px;font-size:13px">对方先用 <b style="color:#374151">CO- 开头协同授权码</b> 注册协同账号；把下方邀请码发给对方，登录后在「加入班级」处输入即可加入本班。</p>
       <div class="row" id="codeGenRow" style="gap:8px;margin-bottom:6px">
         <button class="btn btn-pri btn-sm" onclick="makeInviteCode()">🔑 生成邀请码</button>
       </div>
@@ -518,7 +518,7 @@ function renderInviteCode(codeObj) {
     genRow.style.display = 'none';
     row.style.display = 'block';
     codeEl.textContent = codeObj.code;
-    hint.textContent = '把邀请码发给协同老师，对方在后台「加入班级」处输入即可加入本班；长期有效、可多人使用，不用时点「作废」。';
+    hint.textContent = '邀请码长期有效、可多人使用；点「作废」或「重新生成」可让旧码失效。';
   } else {
     genRow.style.display = 'flex';
     row.style.display = 'none';
