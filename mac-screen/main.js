@@ -1,61 +1,106 @@
 /**
- * 班级喊话 · Mac 教室演示屏(主进程)
- *  - 启动即全屏加载教室端页面(room.html)
- *  - 若本机服务(3000)未运行, 自动用 node 拉起 server/index.js
- *  - 支持 ROOM_URL 环境变量指向局域网/云端服务地址
+ * 班级喊话 · 跨平台教室演示屏(Electron 桌面端,支持 macOS / Windows)
+ *  - 启动即全屏加载教室端大屏页面(room.html)
+ *  - 服务地址优先级: 命令行 --server <url> / 环境变量 CALL_SERVER > 已保存配置 > 内置云端地址 https://callclass.site
+ *  - 开发模式指向本机服务时, 若服务未启动会自动用 node 拉起 server/index.js
  */
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const http = require('http');
+const https = require('https');
 const { spawn } = require('child_process');
 
-app.disableHardwareAcceleration(); // 演示屏稳定性优先, 避免部分 Mac 显卡驱动花屏
+app.disableHardwareAcceleration(); // 演示屏稳定性优先, 避免部分显卡花屏
 
-const SERVER_URL = 'http://127.0.0.1:3000';
-const ROOM_URL = process.env.ROOM_URL || SERVER_URL + '/room';
+const DEFAULT_SERVER = 'http://callclass.site'; // 内置云端默认服务地址: 教室端启动即直连云端, 无需再手动设置
 const SERVER_PORT = 3000;
+// 以下仅开发模式用于"自动拉起本机服务";打包后的独立 exe/app 不包含 node, 需连接已运行的服务
 const SERVER_ENTRY = path.join(__dirname, '..', 'server', 'index.js');
 const SERVER_CWD = path.join(__dirname, '..');
-const MAX_WAIT_SERVER = 15000; // 自动拉起服务后最多等待毫秒
+const MAX_WAIT_SERVER = 15000;
 
 let win = null;
 let startingServer = false;
+let serverUrl = DEFAULT_SERVER;
+
+/* ---------------- 服务地址 ---------------- */
+function normalizeServer(raw) {
+  let s = String(raw || '').trim().replace(/\/+$/, '');
+  s = s.replace(/\/room$/i, '').replace(/\/$/,'');
+  if (!/^https?:\/\//i.test(s)) return null;
+  return s;
+}
+
+function configPath() {
+  return path.join(app.getPath('userData'), 'settings.json');
+}
+function loadConfig() {
+  try { return JSON.parse(fs.readFileSync(configPath(), 'utf8')); } catch (e) { return {}; }
+}
+function saveConfig(cfg) {
+  try {
+    fs.mkdirSync(path.dirname(configPath()), { recursive: true });
+    fs.writeFileSync(configPath(), JSON.stringify(cfg, null, 2));
+  } catch (e) { /* 忽略写入失败 */ }
+}
+
+function initialServerUrl() {
+  const argv = process.argv;
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i].indexOf('--server=') === 0) {
+      const s = normalizeServer(argv[i].split('=')[1]);
+      if (s) return s;
+    }
+    if (argv[i] === '--server' && argv[i + 1]) {
+      const s = normalizeServer(argv[i + 1]);
+      if (s) return s;
+    }
+  }
+  const envVal = process.env.CALL_SERVER || String(process.env.ROOM_URL || '').replace(/\/room$/i, '');
+  const fromEnv = normalizeServer(envVal);
+  if (fromEnv) return fromEnv;
+  const saved = normalizeServer(loadConfig().server);
+  if (saved) return saved;
+  return DEFAULT_SERVER;
+}
 
 /* ---------------- 工具 ---------------- */
 function httpGetJson(url, timeout) {
   return new Promise((resolve) => {
-    const req = http.get(url, { timeout: timeout || 1000 }, (res) => {
-      let data = '';
-      res.on('data', (c) => (data += c));
-      res.on('end', () => {
-        res.statusCode < 400 ? resolve({ ok: true }) : resolve({ ok: false });
-      });
+    const lib = /^https:/i.test(url) ? https : http;
+    const req = lib.get(url, { timeout: timeout || 1000 }, (res) => {
+      res.resume();
+      res.on('end', () => resolve({ ok: res.statusCode < 400 }));
     });
     req.on('error', () => resolve({ ok: false }));
     req.on('timeout', () => { req.destroy(); resolve({ ok: false }); });
   });
 }
 
-function isServerUp() {
-  return httpGetJson(SERVER_URL + '/api/health', 800).then((r) => r.ok);
+function isServerUp(base) {
+  return httpGetJson(base + '/api/health', 900).then((r) => r.ok);
 }
 
+function isLocalUrl(base) {
+  return /localhost|127\.0\.0\.1|\[::1\]/.test(base);
+}
+
+/* 开发模式自动拉起本机服务 */
 function startServer() {
   return new Promise((resolve) => {
-    if (startingServer) return; // 已在拉起中
+    if (startingServer) return;
     startingServer = true;
     const child = spawn(process.execPath, [SERVER_ENTRY], {
       cwd: SERVER_CWD,
       env: { ...process.env, PORT: String(SERVER_PORT) },
       stdio: 'ignore',
-      detached: false,
     });
     child.on('error', () => resolve({ ok: false, reason: '启动服务进程失败' }));
     child.on('exit', () => { startingServer = false; });
-    // 轮询等待服务就绪
     const t0 = Date.now();
     const timer = setInterval(async () => {
-      if (await isServerUp()) {
+      if (await isServerUp(serverUrl)) {
         clearInterval(timer);
         resolve({ ok: true });
       } else if (Date.now() - t0 > MAX_WAIT_SERVER) {
@@ -69,7 +114,7 @@ function startServer() {
 /* ---------------- 窗口 ---------------- */
 function loadRoom() {
   if (!win) return;
-  win.loadURL(ROOM_URL);
+  win.loadURL(normalizeServer(serverUrl) + '/room');
 }
 
 function loadErrorPage(reason) {
@@ -78,10 +123,15 @@ function loadErrorPage(reason) {
 }
 
 async function boot() {
-  if (await isServerUp()) { loadRoom(); return; }
-  const r = await startServer();
-  if (r.ok) loadRoom();
-  else loadErrorPage(r.reason || '服务不可用');
+  if (await isServerUp(serverUrl)) { loadRoom(); return; }
+  const isDevLocal = !app.isPackaged && isLocalUrl(serverUrl) && fs.existsSync(SERVER_ENTRY);
+  if (isDevLocal) {
+    const r = await startServer();
+    if (r.ok) { loadRoom(); return; }
+    loadErrorPage(r.reason || '服务不可用');
+  } else {
+    loadErrorPage('无法连接服务 ' + serverUrl + '\n请确认服务已启动, 或在下方填写正确的服务地址。');
+  }
 }
 
 function createWindow() {
@@ -114,10 +164,65 @@ function createWindow() {
 
 /* ---------------- IPC ---------------- */
 ipcMain.on('quit', () => app.quit());
+ipcMain.on('window-minimize', () => {
+  if (!win || win.isDestroyed()) return;
+  const doMin = () => { if (win && !win.isDestroyed()) win.minimize(); };
+  // macOS: 全屏状态直接 minimize 不生效, 先退出全屏, 等动画完成再收起
+  if (win.isFullScreen()) {
+    let fired = false;
+    const handler = () => {
+      if (fired) return;
+      fired = true;
+      win.removeListener('leave-full-screen', handler);
+      setTimeout(doMin, 120); // 等退出全屏动画结束
+    };
+    win.once('leave-full-screen', handler);
+    win.setFullScreen(false);
+    setTimeout(handler, 900); // 兜底: 极端情况下事件不触发
+  } else {
+    doMin();
+  }
+});
+ipcMain.on('window-pulse', () => {
+  if (!win || win.isDestroyed()) return;
+  const raise = () => {
+    if (win && !win.isDestroyed()) {
+      win.show();
+      win.setFullScreen(true);
+      win.focus();
+    }
+  };
+  if (win.isMinimized()) {
+    win.restore();      // 先取消最小化
+    setTimeout(raise, 350); // 等窗口回到屏幕再进全屏
+  } else {
+    raise();
+  }
+});
+ipcMain.handle('get-auto-launch', () => {
+  try { return { ok: true, value: app.getLoginItemSettings().openAtLogin }; }
+  catch (e) { return { ok: false, error: '无法读取开机自启设置' }; }
+});
+ipcMain.handle('set-auto-launch', (e, enable) => {
+  try {
+    app.setLoginItemSettings({ openAtLogin: !!enable });
+    return { ok: true, value: app.getLoginItemSettings().openAtLogin };
+  } catch (err) { return { ok: false, error: '设置失败:' + ((err && err.message) || err) }; }
+});
 ipcMain.on('retry', () => { if (win) boot(); });
 ipcMain.on('reload', () => { if (win) win.reload(); });
+ipcMain.handle('get-server', () => serverUrl);
+ipcMain.handle('save-server', (e, raw) => {
+  const s = normalizeServer(raw);
+  if (!s) return { ok: false, error: '地址需以 http:// 或 https:// 开头, 例如 http://192.168.1.5:3000' };
+  serverUrl = s;
+  saveConfig({ server: s });
+  return { ok: true, server: s };
+});
 
 /* ---------------- 生命周期 ---------------- */
+serverUrl = initialServerUrl();
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {

@@ -25,6 +25,16 @@ function rnd(n) {
   for (let i = 0; i < n; i++) s += CODE_SET[Math.floor(Math.random() * CODE_SET.length)];
   return s;
 }
+function uniqueBindCode() {
+  let code;
+  do { code = rnd(8); } while (db.classes.some((c) => c.bindCode === code));
+  return code;
+}
+function uniqueInviteCode() {
+  let code;
+  do { code = rnd(6); } while (db.invites.some((i) => i.code === code));
+  return code;
+}
 function nowISO() { return new Date().toISOString(); }
 function hashPw(pw, salt) { return crypto.scryptSync(pw, salt, 32).toString('hex'); }
 
@@ -246,7 +256,7 @@ app.post('/api/classes', auth, (req, res) => {
   if (!/^#[0-9a-fA-F]{6}$/.test(color)) color = '#e11d48';
   const cls = {
     id: nextId('cl'), ownerId: u.id, name, color,
-    bindCode: rnd(8), memberIds: [], createdAt: nowISO(),
+    bindCode: uniqueBindCode(), memberIds: [], createdAt: nowISO(),
   };
   db.classes.push(cls);
   persist();
@@ -284,7 +294,7 @@ app.post('/api/classes/:id/code', auth, (req, res) => {
   const c = db.classes.find((x) => x.id === req.params.id);
   if (!c) return res.status(404).json({ error: '班级不存在' });
   if (c.ownerId !== req.user.id) return res.status(403).json({ error: '仅班主任可重新生成绑定码' });
-  c.bindCode = rnd(8);
+  c.bindCode = uniqueBindCode();
   persist();
   // 通知已经连上的教室端: 绑定码已变更, 需要重新绑定
   io.to('class:' + c.id).emit('rebind', { reason: '绑定码已更新，请重新绑定' });
@@ -297,11 +307,37 @@ app.get('/api/classes/:id/status', auth, (req, res) => {
   res.json({ online: onlineCount(c.id) > 0 });
 });
 
+app.post('/api/classes/:id/minimize', auth, (req, res) => {
+  const c = classForReq(req, res, req.params.id);
+  if (!c) return;
+  io.to('class:' + c.id).emit('minimize', { reason: '老师远程最小化通知屏' });
+  res.json({ ok: true });
+});
+
 function canUseClass(u, c) {
   return c.ownerId === u.id || (c.memberIds || []).includes(u.id);
 }
 
 /* ---- 通知 ---- */
+/* 通知记录仅保留每班最近 10 条 */
+const NOTIF_KEEP = 10;
+
+function trimNotifsOf(classId) {
+  const keep = db.notifications
+    .filter((n) => n.classId === classId)
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+    .slice(0, NOTIF_KEEP);
+  const keepIds = new Set(keep.map((n) => n.id));
+  const before = db.notifications.length;
+  db.notifications = db.notifications.filter((n) => n.classId !== classId || keepIds.has(n.id));
+  return db.notifications.length !== before;
+}
+
+// 新增一条通知记录, 并自动裁剪该班级只保留最近 NOTIF_KEEP 条
+function addNotifRecord(record) {
+  db.notifications.push(record);
+  trimNotifsOf(record.classId);
+}
 app.get('/api/classes/:id/notifications', auth, (req, res) => {
   const c = db.classes.find((x) => x.id === req.params.id);
   if (!c) return res.status(404).json({ error: '班级不存在' });
@@ -309,7 +345,6 @@ app.get('/api/classes/:id/notifications', auth, (req, res) => {
   const list = db.notifications
     .filter((n) => n.classId === c.id)
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
-    .slice(0, 100)
     .map((n) => ({ ...n, onlineNow: onlineCount(c.id) > 0 }));
   res.json({ notifications: list });
 });
@@ -325,31 +360,21 @@ app.post('/api/classes/:id/notify', auth, (req, res) => {
   const voice = (req.body || {}).voice !== false;
   let color = (req.body || {}).color || c.color;
   if (!/^#[0-9a-fA-F]{6}$/.test(color)) color = c.color;
+  const duration = clampDur((req.body || {}).duration);
   const record = {
     id: nextId('nt'), classId: c.id, className: c.name,
     content, voice, color,
     fromId: u.id, fromName: u.username,
     delivered: onlineCount(c.id) > 0,
-    createdAt: nowISO(),
+    duration, createdAt: nowISO(),
   };
-  db.notifications.push(record);
+  addNotifRecord(record);
   persist();
   pushNotify(c.id, {
-    id: record.id, className: c.name, content, voice, color, fromName: u.username, sentAt: record.createdAt,
+    id: record.id, className: c.name, content, voice, color, fromName: u.username,
+    sentAt: record.createdAt, duration,
   });
   res.json({ notification: record });
-});
-
-app.delete('/api/notifications/:id', auth, (req, res) => {
-  const n = db.notifications.find((x) => x.id === req.params.id);
-  if (!n) return res.status(404).json({ error: '记录不存在' });
-  const cls = db.classes.find((x) => x.id === n.classId);
-  if (!(n.fromId === req.user.id || (cls && cls.ownerId === req.user.id))) {
-    return res.status(403).json({ error: '无权删除该记录' });
-  }
-  db.notifications = db.notifications.filter((x) => x.id !== n.id);
-  persist();
-  res.json({ ok: true });
 });
 
 /* ---- 协同老师 ---- */
@@ -378,11 +403,63 @@ app.get('/api/classes/:id/invites', auth, (req, res) => {
   const c = db.classes.find((x) => x.id === req.params.id);
   if (!c) return res.status(404).json({ error: '班级不存在' });
   if (c.ownerId !== req.user.id) return res.status(403).json({ error: '仅班主任可查看' });
+  const codeInv = db.invites.find((i) => i.kind === 'code' && i.classId === c.id);
   res.json({
-    invites: db.invites.filter((i) => i.classId === c.id).map((i) => ({
+    members: membersOf(c),
+    code: codeInv ? { code: codeInv.code, status: codeInv.status } : null,
+    invites: db.invites.filter((i) => i.kind !== 'code' && i.classId === c.id).map((i) => ({
       id: i.id, username: i.toName, status: i.status, createdAt: i.createdAt,
     })),
   });
+});
+
+/* 邀请码: 班主任生成 / 协同账号输码加入 */
+app.post('/api/classes/:id/invite-code', auth, (req, res) => {
+  const c = db.classes.find((x) => x.id === req.params.id);
+  if (!c) return res.status(404).json({ error: '班级不存在' });
+  if (c.ownerId !== req.user.id) return res.status(403).json({ error: '仅班主任可生成邀请码' });
+  let inv = db.invites.find((i) => i.kind === 'code' && i.classId === c.id);
+  if (inv) {
+    // 已存在则重新生成(旧码立即失效)
+    inv.code = uniqueInviteCode();
+    inv.status = 'active';
+    inv.createdAt = nowISO();
+  } else {
+    inv = {
+      id: nextId('iv'), kind: 'code', code: uniqueInviteCode(), classId: c.id,
+      className: c.name, ownerName: req.user.username, createdBy: req.user.id,
+      status: 'active', createdAt: nowISO(),
+    };
+    db.invites.push(inv);
+  }
+  persist();
+  res.json({ code: inv.code, status: inv.status });
+});
+
+app.delete('/api/classes/:id/invite-code', auth, (req, res) => {
+  const c = db.classes.find((x) => x.id === req.params.id);
+  if (!c) return res.status(404).json({ error: '班级不存在' });
+  if (c.ownerId !== req.user.id) return res.status(403).json({ error: '仅班主任可操作' });
+  db.invites = db.invites.filter((i) => !(i.kind === 'code' && i.classId === c.id));
+  persist();
+  res.json({ ok: true });
+});
+
+/* 协同账号输入邀请码加入班级(长期有效, 可多人使用; 班主任作废/重生成后失效) */
+app.post('/api/invite-code/accept', auth, (req, res) => {
+  const code = String((req.body || {}).code || '').trim().toUpperCase();
+  if (!code) return res.status(400).json({ error: '请输入邀请码' });
+  const inv = db.invites.find((i) => i.kind === 'code' && i.code === code && i.status === 'active');
+  if (!inv) return res.status(404).json({ error: '邀请码无效或已失效，请核对后重试' });
+  const c = db.classes.find((x) => x.id === inv.classId);
+  if (!c) return res.status(404).json({ error: '班级不存在或已删除' });
+  if (req.user.type !== 'co') return res.status(403).json({ error: '只有协同账号能通过邀请码加入班级' });
+  if ((c.memberIds || []).includes(req.user.id)) {
+    return res.json({ ok: true, already: true, className: c.name, ownerName: inv.ownerName });
+  }
+  c.memberIds.push(req.user.id);
+  persist();
+  res.json({ ok: true, already: false, className: c.name, ownerName: inv.ownerName });
 });
 
 app.delete('/api/classes/:id/invites/:inviteId', auth, (req, res) => {
@@ -429,6 +506,133 @@ app.delete('/api/classes/:id/members/:userId', auth, (req, res) => {
   res.json({ ok: true });
 });
 
+/* ---------------- 定时喊话(任务调度) ---------------- */
+function clampDur(d) {
+  const n = Math.floor(Number(d));
+  return Number.isFinite(n) ? Math.max(0, Math.min(n, 600)) : 0; // 秒,0=教室端自动
+}
+function nextDailyTime(time) {
+  const [h, m] = String(time).split(':').map((x) => Number(x));
+  const d = new Date();
+  d.setHours(h || 0, m || 0, 0, 0);
+  if (d.getTime() <= Date.now()) d.setTime(d.getTime() + 86400000); // 今天的点已过 → 明天
+  return d;
+}
+function jobJSON(j) {
+  const d = new Date(j.runAt);
+  const pad = (x) => String(x).padStart(2, '0');
+  return {
+    id: j.id, classId: j.classId, className: j.className,
+    content: j.content, voice: j.voice !== false, color: j.color, duration: j.duration || 0,
+    type: j.type, runAt: j.runAt, hm: pad(d.getHours()) + ':' + pad(d.getMinutes()),
+    fromId: j.fromId, fromName: j.fromName, createdAt: j.createdAt,
+  };
+}
+function classForReq(req, res, cid) {
+  const c = db.classes.find((x) => x.id === cid);
+  if (!c) { res.status(404).json({ error: '班级不存在' }); return null; }
+  if (!canUseClass(req.user, c)) { res.status(403).json({ error: '无权操作该班级' }); return null; }
+  return c;
+}
+
+app.get('/api/classes/:id/jobs', auth, (req, res) => {
+  const c = classForReq(req, res, req.params.id);
+  if (!c) return;
+  const list = db.jobs.filter((j) => j.classId === c.id).sort((a, b) => (a.runAt < b.runAt ? -1 : 1));
+  res.json({ jobs: list.map(jobJSON) });
+});
+
+app.post('/api/classes/:id/jobs', auth, (req, res) => {
+  const c = classForReq(req, res, req.params.id);
+  if (!c) return;
+  const b = req.body || {};
+  const content = String(b.content || '').trim();
+  if (!content || content.length > 500) return res.status(400).json({ error: '喊话内容需为 1-500 字' });
+  const type = b.type === 'daily' ? 'daily' : 'once';
+  let runAtISO;
+  if (type === 'once') {
+    const t = Date.parse(b.runAt);
+    if (!Number.isFinite(t)) return res.status(400).json({ error: '请选择正确的定时时间' });
+    if (t <= Date.now()) return res.status(400).json({ error: '定时时间需晚于当前时间' });
+    runAtISO = new Date(t).toISOString();
+  } else {
+    if (!/^\d{1,2}:\d{2}$/.test(String(b.time || ''))) return res.status(400).json({ error: '请选择每天的播报时间' });
+    runAtISO = nextDailyTime(String(b.time)).toISOString();
+  }
+  let color = String(b.color || '');
+  if (!/^#[0-9a-fA-F]{6}$/.test(color)) color = c.color;
+  const job = {
+    id: nextId('jb'), classId: c.id, className: c.name,
+    content, voice: b.voice !== false, color, duration: clampDur(b.duration), type,
+    runAt: runAtISO, fromId: req.user.id, fromName: req.user.username, createdAt: nowISO(),
+  };
+  db.jobs.push(job);
+  persist();
+  tickJobs(); // 若设置的时间已到(几乎不可能)立即补执行
+  res.json({ job: jobJSON(job) });
+});
+
+function canManageJob(user, c, j) {
+  return j.fromId === user.id || (c && c.ownerId === user.id);
+}
+
+app.delete('/api/classes/:id/jobs/:jobId', auth, (req, res) => {
+  const c = classForReq(req, res, req.params.id);
+  if (!c) return;
+  const j = db.jobs.find((x) => x.id === req.params.jobId && x.classId === c.id);
+  if (!j) return res.status(404).json({ error: '任务不存在或已执行' });
+  if (!canManageJob(req.user, c, j)) return res.status(403).json({ error: '仅创建者可取消该任务' });
+  db.jobs = db.jobs.filter((x) => x.id !== j.id);
+  persist();
+  res.json({ ok: true });
+});
+
+/* 立即喊一次(主要用于预览/补发每日任务;单次任务会执行并移除) */
+app.post('/api/classes/:id/jobs/:jobId/run', auth, (req, res) => {
+  const c = classForReq(req, res, req.params.id);
+  if (!c) return;
+  const j = db.jobs.find((x) => x.id === req.params.jobId && x.classId === c.id);
+  if (!j) return res.status(404).json({ error: '任务不存在' });
+  if (!canManageJob(req.user, c, j)) return res.status(403).json({ error: '仅创建者可操作该任务' });
+  const r = executeJob(j);
+  res.json({ ok: true, delivered: !!(r && r.delivered) });
+});
+
+function executeJob(job) {
+  const cls = db.classes.find((x) => x.id === job.classId);
+  if (!cls) {
+    db.jobs = db.jobs.filter((x) => x.id !== job.id);
+    persist();
+    return null;
+  }
+  const record = {
+    id: nextId('nt'), classId: cls.id, className: cls.name,
+    content: job.content, voice: job.voice !== false, color: job.color || cls.color,
+    fromId: job.fromId, fromName: job.fromName,
+    delivered: onlineCount(cls.id) > 0, duration: job.duration || 0,
+    schedule: job.type, createdAt: nowISO(),
+  };
+  addNotifRecord(record);
+  pushNotify(cls.id, {
+    id: record.id, className: cls.name, content: record.content, voice: record.voice,
+    color: record.color, fromName: record.fromName, sentAt: record.createdAt, duration: record.duration,
+  });
+  if (job.type === 'once') {
+    db.jobs = db.jobs.filter((x) => x.id !== job.id);
+  } else {
+    let t = Date.parse(job.runAt) + 86400000;
+    while (t <= Date.now()) t += 86400000; // 中间错过则只补最近一次, 不追发多天
+    job.runAt = new Date(t).toISOString();
+  }
+  persist();
+  return record;
+}
+function tickJobs() {
+  const due = db.jobs.filter((j) => Date.parse(j.runAt) <= Date.now());
+  if (!due.length) return;
+  due.forEach((j) => { try { executeJob(j); } catch (e) { console.error('定时喊话执行失败:', e.message); } });
+}
+
 /* ---------------- Socket.IO ---------------- */
 const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
@@ -465,9 +669,18 @@ io.on('connection', (socket) => {
   });
 });
 
+/* 启动时清理一次历史通知: 每个班级仅保留最近 10 条 */
+(() => {
+  let dirty = false;
+  db.classes.forEach((c) => { if (trimNotifsOf(c.id)) dirty = true; });
+  if (dirty) persist();
+})();
+
 httpServer.listen(PORT, () => {
   console.log('');
   console.log('  班级喊话系统 · 服务已启动');
+  setInterval(tickJobs, 10000); // 定时喊话调度
+  tickJobs();
   console.log(`  网页端(老师端): http://localhost:${PORT}/`);
   console.log(`  后台管理:       http://localhost:${PORT}/app`);
   console.log(`  教室端(教室电脑): http://localhost:${PORT}/room`);

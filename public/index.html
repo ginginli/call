@@ -27,7 +27,6 @@
       <!-- 登录 -->
       <form class="auth-pane" id="paneLogin" onsubmit="return doLogin(event)">
         <h2>登录后台</h2>
-        <p class="sub">演示账号: demo / demo123</p>
         <label class="lbl">用户名</label>
         <input class="inp" id="liUser" autocomplete="username" required>
         <label class="lbl">密码</label>
@@ -39,18 +38,20 @@
       <!-- 注册 -->
       <form class="auth-pane hide" id="paneReg" onsubmit="return doReg(event)">
         <h2>注册账号</h2>
-        <p class="sub">第一次使用需激活卡号, 注册成功自动进入后台</p>
+        <p class="sub">第一次使用需激活卡号，注册成功自动进入后台</p>
         <label class="lbl">激活卡号</label>
         <input class="inp mono" id="rgCard" placeholder="例如 OWN-XXXX-XXXX" style="letter-spacing:1px">
-        <label class="lbl">登录用户名(请牢记, 找回密码需用到)</label>
+        <label class="lbl">登录用户名（请牢记，找回密码需用到）</label>
         <input class="inp" id="rgUser" maxlength="20" required>
         <label class="lbl">密码(至少 6 位)</label>
         <input class="inp" id="rgPass" type="password" required>
         <label class="lbl">确认密码</label>
         <input class="inp" id="rgPass2" type="password" required>
+        <label class="lbl">班级邀请码（选填 · 协同老师填写）</label>
+        <input class="inp mono" id="rgInvite" placeholder="班主任给你的邀请码" maxlength="12" style="text-transform:uppercase;letter-spacing:2px">
         <div style="height:18px"></div>
         <button class="btn btn-pri btn-block" type="submit">立即注册</button>
-        <p class="sub" style="margin:12px 0 0;line-height:1.6" id="rgTip">普通激活卡注册后自带 2 个班级; 协同授权码(CO-开头)注册的是协同账号, 不能新建班级</p>
+        <p class="sub" style="margin:12px 0 0;line-height:1.6" id="rgTip">普通激活卡注册后自带 2 个班级；协同授权码（CO- 开头）注册的是协同账号，不能新建班级</p>
       </form>
 
       <!-- 忘记密码 -->
@@ -60,16 +61,12 @@
         <label class="lbl">用户名</label>
         <input class="inp" id="foUser" required>
         <label class="lbl">激活卡号</label>
-        <input class="inp mono" id="foCard" placeholder="OWN-XXXX-XXXX">
+        <input class="inp mono" id="foCard" placeholder="例如 OWN-XXXX-XXXX">
         <label class="lbl">新密码(至少 6 位)</label>
         <input class="inp" id="foPass" type="password" required>
         <div style="height:18px"></div>
         <button class="btn btn-pri btn-block" type="submit">重置密码</button>
       </form>
-    </div>
-
-    <div class="card demo-list" id="demoBox">
-      <div>加载演示激活卡号…</div>
     </div>
   </div>
 </div>
@@ -105,10 +102,20 @@ async function doReg(e) {
     await api('POST', '/api/auth/register', {
       username: rgUser.value.trim(), password: rgPass.value, cardCode: rgCard.value.trim(),
     });
+    await joinByInviteCode((rgInvite.value || '').trim().toUpperCase());
     location.href = '/app';
   } catch (err) {
     toast(err.message, 'err'); btn.disabled = false;
   }
+}
+
+/* 注册时填了邀请码 → 自动加入对应班级 */
+async function joinByInviteCode(code) {
+  if (!code) return;
+  try {
+    const r = await api('POST', '/api/invite-code/accept', { code });
+    toast(r.already ? '你已在该班级中' : '已加入班级「' + (r.className || '') + '」', 'ok');
+  } catch (e) { toast(e.message, 'err'); }
 }
 
 async function doForgot(e) {
@@ -125,20 +132,7 @@ async function doForgot(e) {
   } finally { btn.disabled = false; }
 }
 
-(async function loadDemoCards() {
-  try {
-    const { cards } = await api('GET', '/api/auth/demo-cards');
-    const box = document.getElementById('demoBox');
-    if (!cards || !cards.length) { box.remove(); return; }
-    const owner = cards.filter((c) => c.type === 'owner').map((c) => c.code);
-    const co = cards.filter((c) => c.type === 'co').map((c) => c.code);
-    const row = (a) => a.map((c) => `<code>${esc(c)}</code>`).join(' ');
-    box.innerHTML = '<div style="font-weight:600;color:#374151;margin-bottom:6px">演示激活卡号(注册新账号用)</div>' +
-      '<div>普通激活卡(含 2 个班级):<br>' + row(owner) + '</div>' +
-      '<div style="margin-top:6px">协同授权码(协同账号):<br>' + row(co) + '</div>' +
-      '<div style="margin-top:8px">仅用于本机演示; 正式使用需联系客服购买。忘记密码时也要用到卡号。</div>';
-  } catch (e) { /* 无需处理 */ }
-})();
+
 </script>
 </body>
 </html>

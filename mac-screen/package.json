@@ -1,16 +1,43 @@
 {
-  "name": "class-call-mac-screen",
+  "name": "class-call-screen",
   "version": "1.0.0",
   "private": true,
-  "description": "班级喊话 · Mac 教室演示屏(桌面壳,加载本机/局域网的教室端页面)",
+  "description": "班级喊话 · 教室演示屏(跨平台 Electron 桌面端, 支持 macOS / Windows, 全屏接收并播报通知)",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --mac dir"
+    "dist": "electron-builder --mac dir && electron-builder --win portable",
+    "dist:mac": "electron-builder --mac dir",
+    "dist:win": "electron-builder --win portable"
   },
   "author": "",
   "license": "MIT",
+  "build": {
+    "appId": "xyz.siyunx.call.screen",
+    "productName": "班级喊话演示屏",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "error.html",
+      "package.json"
+    ],
+    "mac": {
+      "target": [
+        "dir"
+      ],
+      "category": "public.app-category.education"
+    },
+    "win": {
+      "target": [
+        "portable"
+      ]
+    }
+  },
   "devDependencies": {
-    "electron": "^44.2.0"
+    "electron": "^44.2.0",
+    "electron-builder": "^26.15.3"
   }
 }

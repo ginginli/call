@@ -20,7 +20,9 @@
       <button class="btn btn-sm" onclick="toggleFull()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⛶ 全屏</button>
       <button class="btn btn-sm" onclick="doTest()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">测试播报</button>
       <button class="btn btn-sm btn-danger" onclick="doUnbind()">解绑</button>
-      <button class="btn btn-sm" id="btnDesktopExit" onclick="desktopQuit()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⏻ 退出演示屏</button>
+      <button class="btn btn-sm" id="btnMinWait" onclick="toggleWaitMode()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">📥 最小化待命</button>
+      <button class="btn btn-sm" id="btnAuto" onclick="toggleAutoLaunch()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⚡ 开机自启:关</button>
+      <button class="btn btn-sm" id="btnDesktopExit" onclick="desktopQuit()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⏻ 退出教室端</button>
     </div>
   </div>
 
@@ -30,10 +32,9 @@
       <h2>绑定班级</h2>
       <p class="sub">请老师在后台创建班级后，将 <b>绑定码</b> 填入此处。绑定一次即可，之后开机自动连接。</p>
       <label class="lbl" style="color:#c7cddd">班级绑定码</label>
-      <input class="inp mono" id="codeInp" maxlength="12" placeholder="例如 DEMO8YQZ" autocomplete="off" required>
+      <input class="inp mono" id="codeInp" maxlength="12" placeholder="输入班级绑定码" autocomplete="off" required>
       <div style="height:16px"></div>
       <button class="btn btn-pri btn-block" type="submit" id="bindBtn">连接并开始接收通知</button>
-      <p class="sub" style="margin:14px 0 0">提示：请先点击一次页面按钮以启用语音播报（浏览器限制）。</p>
     </form>
   </div>
 
@@ -80,6 +81,9 @@ let className = '';
 let classColor = '#4f46e5';
 let overlayTimer = null;
 let lastRead = '';
+let waitMode = localStorage.getItem('room_waitmode') === '1'; // 桌面端待命模式:平时最小化,通知自动弹出
+let openedByNotify = false; // 本次是否由通知弹出(弹完自动收回)
+let manualBind = false; // 是否是老师手动重新绑定(手动绑定时不自动收走窗口)
 
 const socket = io();
 
@@ -157,6 +161,7 @@ async function doBind(e) {
   const val = document.getElementById('codeInp').value.trim().toUpperCase();
   if (!val) return;
   code = val;
+  manualBind = true;
   unlockAudio(); // 用户点击 = 允许语音
   setState('正在绑定…', null);
   document.getElementById('bindBtn').disabled = true;
@@ -185,6 +190,8 @@ socket.on('bound', (r) => {
     if (!audioUnlocked) document.getElementById('unlockPill').classList.remove('hide');
     toast('绑定成功：' + className, 'ok');
     tickClock(); setInterval(tickClock, 1000);
+    // 待命模式(开机自启恢复时):绑定确认后自动收起到任务栏待命
+    if (waitMode && window.desktopApp && !manualBind) setTimeout(() => { try { window.desktopApp.minimize(); } catch (e) {} }, 900);
   } else {
     code = ''; localStorage.removeItem('room_code');
     showSetup();
@@ -194,6 +201,8 @@ socket.on('bound', (r) => {
 });
 
 socket.on('notify', (m) => {
+  openedByNotify = true;
+  if (window.desktopApp) { try { window.desktopApp.pulse(); } catch (e) {} }
   beep();
   showNotify(m);
   if (m.voice !== false) speak(m.content);
@@ -201,13 +210,32 @@ socket.on('notify', (m) => {
 
 socket.on('rebind', (m) => {
   code = ''; localStorage.removeItem('room_code');
+  openedByNotify = false;
+  if (waitMode) setWaitMode(false);
   closeOverlay();
   speechSynthesis.cancel && speechSynthesis.cancel();
   showSetup();
   toast((m && m.reason) || '绑定码已更新，请重新绑定', 'err');
 });
 
+socket.on('minimize', () => {
+  closeOverlay();
+  if (window.desktopApp) {
+    try { window.desktopApp.minimize(); } catch (e) {}
+  }
+});
+
 /* ---------- 通知弹层 ---------- */
+function displayMs(m) {
+  const len = (m.content || '').length;
+  if (typeof m.duration === 'number' && m.duration > 0) {
+    // 老师配置了停留时长; 若语音较长则至少等语音播完再收起
+    const cfgMs = m.duration * 1000;
+    const speakMs = Math.min(len * 250, 60000);
+    return Math.max(cfgMs, speakMs);
+  }
+  return Math.max(12000, Math.min(len * 400, 60000)); // 默认: 按字数 12~60 秒
+}
 function showNotify(m) {
   lastRead = m.content;
   document.getElementById('ovHead').style.background = m.color || '#e11d48';
@@ -218,11 +246,16 @@ function showNotify(m) {
   ov.classList.remove('hide');
   if (document.fullscreenEnabled) { try { if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); } catch (e) {} }
   clearTimeout(overlayTimer);
-  overlayTimer = setTimeout(closeOverlay, Math.max(12000, Math.min(m.content.length * 400, 60000)));
+  overlayTimer = setTimeout(closeOverlay, displayMs(m));
 }
 function closeOverlay() {
   document.getElementById('overlay').classList.add('hide');
   clearTimeout(overlayTimer);
+  // 待命模式下,通知播完自动收回到任务栏,不占屏幕
+  if (waitMode && openedByNotify && window.desktopApp) {
+    openedByNotify = false;
+    setTimeout(() => { try { window.desktopApp.minimize(); } catch (e) {} }, 400);
+  }
 }
 
 /* ---------- 按钮 ---------- */
@@ -266,10 +299,49 @@ function desktopQuit() {
   else toggleFull();
 }
 
-/* 桌面演示屏壳里显示"退出演示屏"按钮 */
+/* 桌面教室端壳里显示"开机自启"与"退出教室端"按钮 */
+let autoLaunch = false;
+function renderAutoBtn() {
+  const b = document.getElementById('btnAuto');
+  if (b) b.textContent = '⚡ 开机自启:' + (autoLaunch ? '开' : '关');
+}
+async function toggleAutoLaunch() {
+  const b = document.getElementById('btnAuto');
+  const want = !autoLaunch;
+  if (b) b.disabled = true;
+  try {
+    const r = await window.desktopApp.setAutoLaunch(want);
+    if (r && r.ok) { autoLaunch = !!r.value; renderAutoBtn(); toast('开机自启已' + (autoLaunch ? '开启' : '关闭') + '，下次开机自动进入本屏', 'ok'); }
+    else toast((r && r.error) || '设置失败', 'err');
+  } catch (e) { toast('设置失败', 'err'); }
+  if (b) b.disabled = false;
+}
+function renderWaitBtn() {
+  const el = document.getElementById('btnMinWait');
+  if (!el) return;
+  el.textContent = waitMode ? '📌 固定在屏幕上显示' : '📥 最小化待命';
+}
+function setWaitMode(v) {
+  waitMode = !!v;
+  localStorage.setItem('room_waitmode', waitMode ? '1' : '0');
+  renderWaitBtn();
+  if (waitMode && window.desktopApp) { try { window.desktopApp.minimize(); } catch (e) {} }
+}
+function toggleWaitMode() {
+  setWaitMode(!waitMode);
+  toast(waitMode ? '待命模式已开启：平时收在任务栏，收到老师通知会自动弹出并播报，播完自动收回' : '已切回常显模式：屏幕保持显示待机画面', 'ok');
+}
 if (window.desktopApp) {
   const b = document.getElementById('btnDesktopExit');
   if (b) b.style.display = '';
+  const mb = document.getElementById('btnMinWait');
+  if (mb) mb.style.display = '';
+  renderWaitBtn();
+  const ab = document.getElementById('btnAuto');
+  if (ab) { ab.style.display = ''; renderAutoBtn(); }
+  window.desktopApp.getAutoLaunch().then((r) => {
+    if (r && r.ok) { autoLaunch = !!r.value; renderAutoBtn(); }
+  }).catch(() => {});
 }
 
 function tickClock() {

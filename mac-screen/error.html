@@ -5,32 +5,56 @@
 <title>班级喊话 · 演示屏</title>
 <style>
   html,body{margin:0;height:100%;background:#0b1020;color:#e5e7eb;
-    font-family:-apple-system,"PingFang SC",sans-serif;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
     display:flex;align-items:center;justify-content:center}
-  .box{text-align:center;padding:40px}
-  .icon{font-size:56px}
-  h1{font-size:22px;margin:16px 0 8px}
-  p{color:#9ca3af;line-height:1.7;margin:0 0 24px;font-size:14px}
-  button{background:#4f46e5;color:#fff;border:none;border-radius:10px;
-    padding:12px 32px;font-size:15px;cursor:pointer;margin:0 6px}
-  button.ghost{background:rgba(255,255,255,.1)}
+  .box{text-align:center;padding:36px;max-width:520px}
+  .icon{font-size:52px}
+  h1{font-size:21px;margin:14px 0 8px}
+  p{color:#9ca3af;line-height:1.7;margin:0 0 22px;font-size:14px;white-space:pre-line}
+  label{display:block;text-align:left;color:#c7cddd;font-size:13px;margin-bottom:6px}
+  input{width:100%;box-sizing:border-box;background:rgba(255,255,255,.07);border:1px solid
+    rgba(255,255,255,.2);border-radius:10px;color:#fff;padding:11px 14px;font-size:15px;
+    font-family:ui-monospace,Menlo,Consolas,monospace;outline:none;margin-bottom:14px}
+  input:focus{border-color:#6366f1}
+  .btn{background:#4f46e5;color:#fff;border:none;border-radius:10px;
+    padding:12px 26px;font-size:15px;cursor:pointer;margin:4px 6px}
+  .btn.ghost{background:rgba(255,255,255,.12)}
+  .hint{font-size:12px;color:#6b7280;margin-top:10px;line-height:1.6}
 </style>
 </head>
 <body>
   <div class="box">
     <div class="icon">📡</div>
-    <h1>正在连接班级喊话服务…</h1>
-    <p id="why">本机服务(端口 3000)未就绪, 请确认已运行 <b>npm start</b>,<br>
-    或点下方按钮重试。</p>
-    <button onclick="window.desktopApp && window.desktopApp.retry()">重新连接</button>
-    <button class="ghost" onclick="window.desktopApp && window.desktopApp.quit()">退出</button>
+    <h1>连接班级喊话服务失败</h1>
+    <p id="why">请确认服务已启动, 或在下方填写正确的服务地址。</p>
+    <label>服务地址(老师端网页的地址)</label>
+    <input id="serverInp" placeholder="https://callclass.site" spellcheck="false">
+    <div>
+      <button class="btn" id="saveBtn">保存并连接</button>
+      <button class="btn ghost" onclick="window.desktopApp && window.desktopApp.quit()">退出</button>
+    </div>
+    <div class="hint">云端版一般填 <b>https://callclass.site</b>(与老师用浏览器打开的网址一致);<br>
+    局域网/本机演示时, 填对应的 http://192.168.x.x:3000 之类地址。</div>
   </div>
   <script>
+    const $ = (id) => document.getElementById(id);
     try {
-      var q = new URLSearchParams(location.search);
-      var r = q.get('reason');
-      if (r) document.getElementById('why').textContent = decodeURIComponent(r) + '，请点下方按钮重试。';
+      const q = new URLSearchParams(location.search);
+      const r = q.get('reason');
+      if (r) $('why').textContent = decodeURIComponent(r);
     } catch (e) {}
+    (async () => {
+      if (window.desktopApp) {
+        try { const s = await window.desktopApp.getServer(); if (s) $('serverInp').value = s; } catch (e) {}
+        $('saveBtn').onclick = async () => {
+          const url = $('serverInp').value.trim();
+          const res = await window.desktopApp.saveServer(url);
+          if (!res || !res.ok) { $('why').textContent = (res && res.error) || '地址格式不正确'; return; }
+          $('why').textContent = '已保存: ' + res.server + ', 正在连接…';
+          window.desktopApp.retry();
+        };
+      }
+    })();
   </script>
 </body>
 </html>

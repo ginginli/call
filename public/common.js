@@ -42,5 +42,25 @@ function toast(msg, type) {
 }
 
 async function copyText(t) {
-  try { await navigator.clipboard.writeText(t); return true; } catch (e) { return false; }
+  // 方式1: Clipboard API(需 https / localhost 安全上下文)
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(t);
+      return true;
+    }
+  } catch (e) { /* 继续走兼容方案 */ }
+  // 方式2: 临时 textarea + execCommand('copy'), 兼容 http 及旧浏览器
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = t;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, t.length);
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    if (ok) return true;
+  } catch (e) { /* 下面返回 false */ }
+  return false;
 }

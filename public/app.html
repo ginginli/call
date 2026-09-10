@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>班级喊话系统 · 后台</title>
 <link rel="stylesheet" href="/style.css">
+<style>
+  details.fold{border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}
+  details.fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:13px 16px;font-size:14px;color:var(--text)}
+  details.fold>summary::-webkit-details-marker{display:none}
+  details.fold .fold-t{font-weight:700;font-size:15px}
+  details.fold .fold-open{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap}
+  details.fold .fold-body{padding:0 16px 14px}
+  details.fold[open]>summary{border-bottom:1px solid var(--line)}
+</style>
 </head>
 <body>
 
@@ -22,6 +31,7 @@
 </header>
 
 <div id="inviteBox" style="max-width:1240px;margin:14px auto 0;padding:0 18px"></div>
+<div id="joinBox" style="max-width:1240px;margin:10px auto 0;padding:0 18px"></div>
 
 <main class="layout">
   <aside class="side">
@@ -35,12 +45,6 @@
 
     <div id="createWrap" style="display:flex;gap:8px;flex-direction:column"></div>
     <div class="muted" id="quotaTip" style="font-size:12px"></div>
-    <div class="card" style="padding:12px;font-size:12px;color:var(--muted);line-height:1.8">
-      💡 使用流程<br>
-      1. 新建班级 → 得到<b style="color:#374151">绑定码</b><br>
-      2. 在教室电脑打开 <b style="color:#374151">/room</b> 输入绑定码<br>
-      3. 到这里选班级发送 → 教室自动全屏播报
-    </div>
   </aside>
 
   <section class="content" id="content">
@@ -49,6 +53,7 @@
       <h3 id="emptyTitle">暂无班级</h3>
       <p id="emptyDesc"></p>
     </div>
+    <div id="contentBody" style="display:flex;flex-direction:column;gap:16px"></div>
   </section>
 </main>
 
@@ -66,6 +71,7 @@ function boot() {
   renderTop();
   renderSide();
   renderInvites();
+  renderJoinBox();
   renderQuotaTip();
   curId = curId && ME.classes.some((c) => c.id === curId) ? curId : (ME.classes[0] ? ME.classes[0].id : null);
   if (curId) selectClass(curId);
@@ -111,8 +117,8 @@ function renderSide() {
 
 function renderQuotaTip() {
   const t = document.getElementById('quotaTip');
-  if (ME.user.type === 'co') t.textContent = '协同账号由班主任邀请加入班级后可发通知。';
-  else t.innerHTML = '一个主账号自带 2 个班级；需要更多请联系客服(演示: 发送卡口令发新激活卡)。';
+  if (ME.user.type === 'co') t.textContent = '协同账号输入班主任给的邀请码即可加入班级，随后可发通知。';
+  else t.innerHTML = '一个主账号自带 2 个班级；需要更多请联系客服。';
 }
 
 function showEmpty() {
@@ -121,9 +127,10 @@ function showEmpty() {
   const isCo = ME.user.type === 'co';
   document.getElementById('emptyTitle').textContent = isCo ? '暂无加入的班级' : '还没有班级';
   document.getElementById('emptyDesc').textContent = isCo
-    ? '需要由班级主账号输入你的用户名发出邀请，你在上方“邀请”中接受后即可发通知。'
+    ? '在上方「加入班级」处输入班主任给你的邀请码，即可加入并发送通知。'
     : '在上方输入班级名称点“新建”，即可获得该班级的绑定码。';
-  document.getElementById('content').querySelectorAll('#clsPane').forEach(() => {});
+  const body = document.getElementById('contentBody');
+  if (body) body.innerHTML = '';
 }
 
 /* ================= 邀请横幅 ================= */
@@ -151,15 +158,16 @@ async function selectClass(id) {
   renderSide();
   renderContent();
   refreshNotifs();
+  refreshJobs();
 }
 
 function renderContent() {
   const c = cur;
   const isOwner = c.isOwner;
-  const box = document.getElementById('content');
+  const box = document.getElementById('contentBody');
   const u = ME.user;
   box.innerHTML = `
-  <div class="card" style="padding:16px 18px" id="clsPane">
+  <div class="card" style="padding:16px 18px;order:-2" id="clsPane">
     <div class="spread" style="flex-wrap:wrap;gap:10px">
       <div class="row" style="gap:12px;min-width:0">
         <h2 style="margin:0;font-size:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="clsName">${esc(c.name)}</h2>
@@ -168,7 +176,12 @@ function renderContent() {
           <span class="dot ${c.online ? 'on' : 'off'}"></span><span class="st">${c.online ? '教室在线' : '教室离线'}</span>
         </span>
       </div>
-      <div class="row" style="flex-wrap:wrap">
+      <div class="row" style="flex-wrap:wrap;gap:8px;align-items:center">
+        ${isOwner ? `
+        <span class="muted" style="font-size:13px">绑定码</span>
+        <code id="bindCode" class="mono" style="font-size:15px;background:#f3f4fb;padding:4px 10px;border-radius:6px;color:#1e2434">${esc(c.bindCode || '')}</code>
+        <button class="btn btn-sm" onclick="copyBind()">复制</button>` : ''}
+        <button class="btn btn-sm" onclick="remoteMinimize()">📥 最小化通知屏</button>
         ${isOwner ? `
           <button class="btn btn-sm" onclick="toggleRename()" id="btnRename">✎ 重命名</button>
           <button class="btn btn-sm btn-danger" onclick="doDeleteClass()">删除班级</button>` : `
@@ -178,27 +191,55 @@ function renderContent() {
     <div id="renameBox" class="hide" style="margin-top:10px;display:flex;gap:8px"></div>
   </div>
 
-  ${isOwner ? `
-  <div class="card" style="padding:16px 18px">
-    <div class="spread"><div style="font-weight:700;font-size:15px">教室绑定</div>
-      <span class="dotbox" data-cid="${c.id}"></span>
-    </div>
-    <p class="muted" style="margin:4px 0 12px">在教室电脑浏览器打开 <b>/room</b>，输入下方绑定码即可绑定本班。软件重启后绑定码自动保留。</p>
-    <div class="row" style="flex-wrap:wrap;gap:10px">
-      <code id="bindCode" class="mono" style="font-size:22px;background:#f3f4fb;padding:8px 16px;border-radius:10px">${esc(c.bindCode || '')}</code>
-      <button class="btn" onclick="copyBind()">复制绑定码</button>
-      <button class="btn btn-sm" onclick="regenerateCode()">重新生成</button>
-      <button class="btn btn-sm" style="margin-left:auto" onclick="sendTest()">🔊 发送测试播报</button>
-    </div>
-    <p class="muted" style="font-size:12px;margin:10px 0 0" id="bindHint"></p>
-  </div>` : `
+  ${isOwner ? '' : `
   <div class="card" style="padding:14px 18px;font-size:13px;color:var(--muted)">
     你是 <b style="color:#374151">${esc(u.username)}</b>（协同老师），由 <b style="color:#374151">${esc(c.ownerName || '')}</b> 邀请加入本班，可直接发送通知。
   </div>`}
 
-  <div class="card" style="padding:16px 18px">
+  <div class="card" style="padding:16px 18px;order:-1">
     <div style="font-weight:700;font-size:15px;margin-bottom:10px">发送通知</div>
     <textarea class="inp" id="txtContent" rows="3" maxlength="500" placeholder="输入要播报的内容，如：请三年级二班全体同学马上到操场集合。"></textarea>
+
+    <details class="fold" style="margin-top:10px" open>
+      <summary>
+        <span class="fold-t">⚙️ 停留时长 / 定时喊话</span>
+        <span class="fold-open">展开 ▾</span>
+      </summary>
+      <div class="fold-body">
+        <div class="row" style="gap:14px;flex-wrap:wrap;align-items:center;padding:8px 0">
+          <label class="row" style="gap:6px">
+            <span class="muted" style="font-size:13px">教室弹窗停留</span>
+            <select class="sel" id="selDuration" style="width:auto">
+              <option value="0">自动(按字数 12-60秒)</option>
+              <option value="30">30 秒</option>
+              <option value="60">1 分钟</option>
+              <option value="120">2 分钟</option>
+              <option value="300" selected>5 分钟</option>
+              <option value="600">10 分钟</option>
+            </select>
+          </label>
+          <label class="row" style="gap:6px">
+            <span class="muted" style="font-size:13px">发送方式</span>
+            <select class="sel" id="selMode" style="width:auto" onchange="onModeChange()">
+              <option value="now">立即发送</option>
+              <option value="once">定时发送(指定日期时间)</option>
+              <option value="daily">每天固定时间</option>
+            </select>
+          </label>
+        </div>
+        <div id="cfgOnce" class="hide row" style="gap:8px;align-items:center">
+          <span class="muted" style="font-size:13px">发送时刻</span>
+          <input class="inp" type="datetime-local" id="inpOnceAt" style="width:auto;padding:8px 10px">
+          <span class="muted" style="font-size:12px">到点自动播报一次</span>
+        </div>
+        <div id="cfgDaily" class="hide row" style="gap:8px;align-items:center">
+          <span class="muted" style="font-size:13px">每天时刻</span>
+          <input class="inp" type="time" id="inpDailyAt" style="width:auto;padding:8px 10px">
+          <span class="muted" style="font-size:12px">每天这个时间自动播报(可重复)</span>
+        </div>
+      </div>
+    </details>
+
     <div class="row" style="margin-top:10px;flex-wrap:wrap;gap:12px">
       <label class="row" style="gap:6px;cursor:pointer">
         <input type="checkbox" id="chkVoice" checked style="width:16px;height:16px"> 语音播报
@@ -207,34 +248,56 @@ function renderContent() {
         <span class="muted" style="font-size:13px">弹窗颜色</span>
         <span class="swatches" id="swatches"></span>
       </div>
-      <button class="btn btn-pri btn-sm" style="margin-left:auto;padding:10px 22px;font-size:15px" onclick="doSend()">发送到教室 📢</button>
+      <button class="btn btn-sm" onclick="sendTest()">🔊 测试</button>
+      <button class="btn btn-pri btn-sm" id="btnSend" style="margin-left:auto;padding:10px 22px;font-size:15px" onclick="sendByMode()">发送到教室 📢</button>
     </div>
   </div>
 
   <div class="card">
     <div class="spread" style="padding:14px 18px;border-bottom:1px solid var(--line)">
-      <div style="font-weight:700;font-size:15px">通知记录</div>
+      <div style="font-weight:700;font-size:15px">⏰ 定时喊话</div>
+      <button class="btn btn-sm" onclick="refreshJobs()">刷新</button>
+    </div>
+    <div id="jobList"><div class="empty-state" style="padding:22px">加载中…</div></div>
+  </div>
+
+  <div class="card">
+    <div class="spread" style="padding:14px 18px;border-bottom:1px solid var(--line)">
+      <div style="font-weight:700;font-size:15px">通知记录 <span class="muted" style="font-size:12px;font-weight:400">仅保留最近 10 条记录</span></div>
       <button class="btn btn-sm" onclick="refreshNotifs()">刷新</button>
     </div>
     <div id="notifList"><div class="empty-state" style="padding:30px">加载中…</div></div>
   </div>
 
   ${isOwner ? `
-  <div class="card" style="padding:16px 18px">
-    <div style="font-weight:700;font-size:15px;margin-bottom:4px">协同老师（多人管理本班）</div>
-    <p class="muted" style="margin:0 0 12px;font-size:13px">对方需先用 <b>CO- 开头协同授权码</b> 注册协同账号，再输入其用户名邀请。</p>
-    <div style="display:flex;gap:8px;margin-bottom:12px">
-      <input class="inp grow" id="inviteName" placeholder="输入对方协同账号的用户名">
-      <button class="btn btn-pri btn-sm" onclick="doInvite()">发送邀请</button>
+  <details class="fold">
+    <summary>
+      <span class="fold-t">👥 协同老师</span>
+      <span class="fold-open">展开 ▾</span>
+    </summary>
+    <div class="fold-body">
+      <p class="muted" style="margin:2px 0 10px;font-size:13px">对方先用 <b style="color:#374151">CO- 开头协同授权码</b> 注册协同账号；把你生成的<b>邀请码</b>发给对方，对方登录后在后台「加入班级」处输入邀请码即可加入本班。邀请码长期有效、可给多位老师使用，不需要时可点「作废」。</p>
+      <div class="row" id="codeGenRow" style="gap:8px;margin-bottom:6px">
+        <button class="btn btn-pri btn-sm" onclick="makeInviteCode()">🔑 生成邀请码</button>
+      </div>
+      <div id="codeRow" style="display:none;margin-bottom:6px">
+        <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
+          <span id="invCode" class="mono" style="font-size:22px;font-weight:800;letter-spacing:6px;padding:8px 16px;background:#f3f4f6;border:1px dashed var(--line);border-radius:10px"></span>
+          <button class="btn btn-sm" onclick="copyInviteCode()">复制</button>
+          <button class="btn btn-sm btn-danger" onclick="revokeInviteCode()">作废</button>
+          <button class="btn btn-sm" onclick="makeInviteCode()">重新生成</button>
+        </div>
+      </div>
+      <p class="muted" style="font-size:12px;margin:0 0 10px" id="codeHint"></p>
+      <div id="coList"></div>
     </div>
-    <div id="coList"></div>
-    <div id="inviteList"></div>
-  </div>` : ''}
+  </details>` : ''}
   `;
 
   // 色板
   const sw = document.getElementById('swatches');
   sw.innerHTML = COLORS.map((cl) => `<span class="sw ${cl === msgColor ? 'on' : ''}" style="background:${cl}" data-c="${cl}" onclick="pickColor(this,'${cl}')"></span>`).join('');
+  if (isOwner && document.getElementById('coList')) loadCoManage();
 }
 
 async function refreshNotifs() {
@@ -255,11 +318,12 @@ async function refreshNotifs() {
             <b>${esc(n.fromName)}</b>
             <span class="muted" style="font-size:12px">${fmtTime(n.createdAt)}</span>
             ${n.voice === false ? '<span class="badge">静音</span>' : '<span class="badge badge-pri">🔊 播报</span>'}
+            ${n.schedule === 'daily' ? '<span class="badge badge-warn">每日定时</span>' : (n.schedule === 'once' ? '<span class="badge badge-pri">定时</span>' : '')}
+            ${n.duration ? '<span class="badge">停留' + fmtDuration(n.duration) + '</span>' : ''}
             ${n.delivered ? '<span class="badge badge-ok">已送达教室</span>' : '<span class="badge badge-red">发送时教室离线</span>'}
           </div>
           <div style="margin-top:4px;word-break:break-word">${esc(n.content)}</div>
         </div>
-        <button class="btn btn-sm btn-danger" onclick="delNotif('${n.id}')">删除</button>
       </div>`).join('');
   } catch (e) { toast(e.message, 'err'); }
 }
@@ -325,21 +389,29 @@ async function copyBind() {
   const code = document.getElementById('bindCode').textContent.trim();
   toast((await copyText(code)) ? '绑定码已复制' : '请手动复制: ' + code, 'ok');
 }
-async function regenerateCode() {
-  if (!confirm('重新生成后, 原绑定码立即失效, 需在教室端重新绑定。继续？')) return;
-  try {
-    const { bindCode } = await api('POST', `/api/classes/${curId}/code`);
-    ME = await api('GET', '/api/me');
-    cur = ME.classes.find((c) => c.id === curId);
-    document.getElementById('bindCode').textContent = bindCode;
-    document.getElementById('bindHint').textContent = '已重新生成。教室端若在线会自动提示重新绑定。';
-    toast('已生成新绑定码', 'ok');
-  } catch (e) { toast(e.message, 'err'); }
-}
-
 function pickColor(el, c) {
   msgColor = c;
   document.querySelectorAll('#swatches .sw').forEach((x) => x.classList.toggle('on', x === el));
+}
+
+function fmtDuration(s) {
+  if (!s) return '';
+  if (s < 60) return s + '秒';
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  if (r === 0) return m + '分钟';
+  return m + '分' + r + '秒';
+}
+function durVal() { return Math.max(0, Number(document.getElementById('selDuration').value) || 0); }
+function onModeChange() {
+  const v = document.getElementById('selMode').value;
+  document.getElementById('cfgOnce').classList.toggle('hide', v !== 'once');
+  document.getElementById('cfgDaily').classList.toggle('hide', v !== 'daily');
+  const b = document.getElementById('btnSend');
+  b.textContent = v === 'now' ? '发送到教室 📢' : (v === 'daily' ? '开启每日喊话 ⏰' : '安排定时喊话 ⏰');
+}
+function sendByMode() {
+  return document.getElementById('selMode').value === 'now' ? doSend() : doSchedule();
 }
 
 async function doSend() {
@@ -347,12 +419,77 @@ async function doSend() {
   if (!content) return toast('请输入通知内容', 'err');
   try {
     const res = await api('POST', `/api/classes/${curId}/notify`, {
-      content, voice: document.getElementById('chkVoice').checked, color: msgColor,
+      content, voice: document.getElementById('chkVoice').checked, color: msgColor, duration: durVal(),
     });
     const n = res.notification;
     toast(n.delivered ? '已发送，教室端正在播报' : '已发送，但教室端当前离线（可能无法播报）', n.delivered ? 'ok' : 'err');
     document.getElementById('txtContent').value = '';
     refreshNotifs();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function doSchedule() {
+  const content = document.getElementById('txtContent').value.trim();
+  if (!content) return toast('请输入喊话内容', 'err');
+  const v = document.getElementById('selMode').value;
+  const common = { content, voice: document.getElementById('chkVoice').checked, color: msgColor, duration: durVal() };
+  try {
+    let msg;
+    if (v === 'once') {
+      const at = document.getElementById('inpOnceAt').value;
+      if (!at) return toast('请先选择发送的日期时间', 'err');
+      const res = await api('POST', `/api/classes/${curId}/jobs`, { ...common, type: 'once', runAt: new Date(at).toISOString() });
+      msg = '已安排定时喊话, 将在 ' + fmtTime(res.job.runAt) + ' 自动播报';
+    } else {
+      const tm = document.getElementById('inpDailyAt').value;
+      if (!tm) return toast('请先选择每天播报的时间', 'err');
+      const res = await api('POST', `/api/classes/${curId}/jobs`, { ...common, type: 'daily', time: tm });
+      msg = '已开启每日喊话, 每天 ' + res.job.hm + ' 自动播报';
+    }
+    toast(msg, 'ok');
+    document.getElementById('txtContent').value = '';
+    document.getElementById('selMode').value = 'now';
+    onModeChange();
+    refreshJobs();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function refreshJobs() {
+  if (!curId) return;
+  try {
+    const { jobs } = await api('GET', `/api/classes/${curId}/jobs`);
+    const box = document.getElementById('jobList');
+    if (!box) return;
+    if (!jobs.length) { box.innerHTML = '<div class="empty-state" style="padding:22px">暂无定时喊话<br><span class="muted" style="font-size:13px">在上方展开"停留时长 / 定时喊话"可安排</span></div>'; return; }
+    box.innerHTML = jobs.map((j) => `
+      <div class="msg-item">
+        <div class="msg-bar" style="background:${esc(j.color || '#e11d48')}"></div>
+        <div class="grow" style="min-width:0">
+          <div class="row" style="gap:8px;flex-wrap:wrap">
+            ${j.type === 'daily' ? '<span class="badge badge-warn">每天 ' + esc(j.hm) + '</span>' : '<span class="badge badge-pri">单次</span>'}
+            <span class="muted" style="font-size:12px">下次执行: ${fmtTime(j.runAt)}</span>
+            ${j.voice === false ? '<span class="badge">静音</span>' : '<span class="badge badge-pri">🔊 播报</span>'}
+            ${j.duration ? '<span class="badge">停留' + fmtDuration(j.duration) + '</span>' : ''}
+          </div>
+          <div style="margin-top:4px;word-break:break-word">${esc(j.content)}</div>
+        </div>
+        <button class="btn btn-sm" onclick="runJobNow('${j.id}')">立即喊一次</button>
+        <button class="btn btn-sm btn-danger" onclick="cancelJob('${j.id}')">取消</button>
+      </div>`).join('');
+  } catch (e) { /* ignore */ }
+}
+async function cancelJob(id) {
+  try {
+    await api('DELETE', `/api/classes/${curId}/jobs/${id}`);
+    toast('已取消该定时喊话', 'ok');
+    refreshJobs();
+  } catch (e) { toast(e.message, 'err'); }
+}
+async function runJobNow(id) {
+  try {
+    const r = await api('POST', `/api/classes/${curId}/jobs/${id}/run`);
+    toast(r.delivered ? '已立即喊出, 教室端正在播报' : '已触发, 但教室端离线未送达', r.delivered ? 'ok' : 'err');
+    refreshJobs(); refreshNotifs();
   } catch (e) { toast(e.message, 'err'); }
 }
 
@@ -364,48 +501,95 @@ async function sendTest() {
   } catch (e) { toast(e.message, 'err'); }
 }
 
-async function delNotif(id) {
-  try { await api('DELETE', `/api/notifications/${id}`); refreshNotifs(); }
-  catch (e) { toast(e.message, 'err'); }
+async function remoteMinimize() {
+  try {
+    await api('POST', `/api/classes/${curId}/minimize`);
+    toast('已发送最小化指令', 'ok');
+  } catch (e) { toast(e.message, 'err'); }
 }
 
-async function doInvite() {
-  const name = document.getElementById('inviteName').value.trim();
-  if (!name) return toast('请输入对方用户名', 'err');
+function renderInviteCode(codeObj) {
+  const genRow = document.getElementById('codeGenRow');
+  const row = document.getElementById('codeRow');
+  const codeEl = document.getElementById('invCode');
+  const hint = document.getElementById('codeHint');
+  if (!genRow || !row) return;
+  if (codeObj && codeObj.code) {
+    genRow.style.display = 'none';
+    row.style.display = 'block';
+    codeEl.textContent = codeObj.code;
+    hint.textContent = '把邀请码发给协同老师，对方在后台「加入班级」处输入即可加入本班；长期有效、可多人使用，不用时点「作废」。';
+  } else {
+    genRow.style.display = 'flex';
+    row.style.display = 'none';
+    codeEl.textContent = '';
+    hint.textContent = '点击生成一个邀请码，发给协同老师使用。';
+  }
+}
+
+async function revokeInviteCode() {
+  if (!confirm('作废当前邀请码？作废后原邀请码将无法再被使用，可随时重新生成。')) return;
   try {
-    await api('POST', `/api/classes/${curId}/invite`, { username: name });
-    toast('邀请已发出，等待对方处理', 'ok');
-    document.getElementById('inviteName').value = '';
-    loadCoManage();
+    await api('DELETE', `/api/classes/${curId}/invite-code`);
+    renderInviteCode(null);
+    toast('邀请码已作废', 'ok');
   } catch (e) { toast(e.message, 'err'); }
 }
 
 async function loadCoManage() {
   const list = document.getElementById('coList');
-  const invList = document.getElementById('inviteList');
   if (!list) return;
   try {
     const data = await api('GET', `/api/classes/${curId}/invites`);
-    const pending = data.invites.filter((i) => i.status === 'pending');
-    list.innerHTML = '<div class="muted" style="font-size:13px;margin-bottom:6px">已加入老师:</div>' +
-      (cur.members.length ? cur.members.map((m) => `
+    renderInviteCode(data.code);
+    list.innerHTML = '<div class="muted" style="font-size:13px;margin-bottom:6px">已加入协同老师:</div>' +
+      (data.members.length ? data.members.map((m) => `
         <div class="row spread" style="padding:6px 0">
           <span><b>${esc(m.username)}</b> <span class="badge badge-warn">协同</span></span>
           <button class="btn btn-sm btn-danger" onclick="removeMember('${m.id}')">移除</button>
-        </div>`).join('') : '<div class="muted" style="font-size:13px">暂无，先在上方输入用户名发出邀请</div>');
-    invList.innerHTML = pending.length
-      ? '<div class="muted" style="font-size:13px;margin:8px 0 4px">等待对方处理:</div>' + pending.map((i) => `
-        <div class="row spread" style="padding:4px 0">
-          <span>${esc(i.username)}</span>
-          <button class="btn btn-sm" onclick="revokeInvite('${i.id}')">撤回</button>
-        </div>`).join('')
-      : '';
+        </div>`).join('') : '<div class="muted" style="font-size:13px">暂无，把上方邀请码发给协同老师即可加入</div>');
   } catch (e) { /* ignore */ }
 }
 
-async function revokeInvite(id) {
-  try { await api('DELETE', `/api/classes/${curId}/invites/${id}`); loadCoManage(); ME = await api('GET', '/api/me'); renderSide(); }
-  catch (e) { toast(e.message, 'err'); }
+async function makeInviteCode() {
+  try {
+    const r = await api('POST', `/api/classes/${curId}/invite-code`);
+    renderInviteCode(r);
+    toast('已生成邀请码', 'ok');
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function copyInviteCode() {
+  const v = (document.getElementById('invCode').textContent || '').trim();
+  if (!v) return toast('请先生成邀请码', 'err');
+  toast((await copyText(v)) ? '邀请码已复制' : '请手动复制', 'ok');
+}
+
+/* 协同账号: 输入邀请码加入班级 */
+function renderJoinBox() {
+  const box = document.getElementById('joinBox');
+  if (!box) return;
+  if (ME.user.type !== 'co') { box.innerHTML = ''; return; }
+  box.innerHTML = `
+    <div class="card" style="padding:12px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span class="badge badge-pri" style="font-size:13px">🔑 加入班级</span>
+      <input class="inp grow" id="joinCode" placeholder="输入班主任给你的邀请码" maxlength="12" style="text-transform:uppercase;letter-spacing:2px">
+      <button class="btn btn-pri btn-sm" onclick="joinByCode()">加入</button>
+    </div>`;
+}
+
+async function joinByCode() {
+  const el = document.getElementById('joinCode');
+  if (!el) return;
+  const code = (el.value || '').trim().toUpperCase();
+  if (!code) return toast('请输入邀请码', 'err');
+  try {
+    const r = await api('POST', '/api/invite-code/accept', { code });
+    toast(r.already ? '你已在该班级中' : '已加入班级「' + (r.className || '') + '」', 'ok');
+    ME = await api('GET', '/api/me');
+    curId = null;
+    boot();
+  } catch (e) { toast(e.message, 'err'); }
 }
 
 async function removeMember(uid) {
@@ -468,6 +652,8 @@ async function pollPresence() {
     setInterval(pollPresence, 6000);
     // 渲染内容后加载协同老师列表
     setInterval(() => { if (cur && cur.isOwner && document.getElementById('coList')) loadCoManage(); }, 10000);
+    // 定时喊话列表自动刷新(到点执行后及时移除)
+    setInterval(() => { if (document.getElementById('jobList')) refreshJobs(); }, 10000);
   } catch (e) {
     if (e.message !== '未登录') toast(e.message, 'err');
   }

@@ -4,7 +4,7 @@
 
 参考《班级喊话使用手册》复刻的可运行版本:老师/办公室在**网页端**发通知,绑定到班级的**教室端**自动**全屏弹窗 + 中文语音播报**。
 
-本项目含一个 **macOS 桌面演示屏**(`mac-screen/`,Electron):在 Mac 上全屏扮演"教室端",启动方式见下文"Mac 演示屏"。
+本项目含一个 **跨平台桌面演示屏**(`mac-screen/`,Electron,支持 **macOS / Windows**):全屏扮演"教室端",在 Mac 或 Windows 大屏上接收并播报通知。构建命令:`npm run dist:mac`(Mac) / `npm run dist:win`(Windows,生成单文件 exe)。
 
 ## 运行
 
@@ -67,10 +67,11 @@ public/          前端(原生 JS, 移动端可用, 可添加到主屏幕)
   index.html     登录/注册/忘记密码
   app.html       老师后台
   room.html      教室端
-mac-screen/      macOS 教室演示屏(Electron 桌面壳, 全屏加载 room 页)
-  main.js        主进程: 全屏窗口 + 自动拉起本地服务
-  preload.js     桌面桥接(退出/重连)
-mac-screen/error.html  服务未启动时的引导页
+mac-screen/      跨平台教室演示屏(Electron 桌面端, macOS / Windows)
+  main.js        主进程: 全屏加载 room 页 + 服务地址默认内置云端 callclass.site(可 --server / 设置弹窗覆盖) + 开发模式自动拉起本地服务
+  preload.js     桌面桥接(退出/重连/读取并保存服务地址)
+  error.html     连不上服务时的地址设置/引导页
+  (dist/)        npm run dist:mac / dist:win 产物
 ```
 
 ## 已知边界(演示性质)

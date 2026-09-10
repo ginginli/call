@@ -16,7 +16,7 @@ function loadDB() {
       console.error('db.json 读取失败, 使用空库:', e.message);
     }
   }
-  return { seq: 1, users: [], cards: [], classes: [], invites: [], notifications: [] };
+  return { seq: 1, users: [], cards: [], classes: [], invites: [], notifications: [], jobs: [] };
 }
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -27,6 +27,7 @@ db.cards = db.cards || [];
 db.classes = db.classes || [];
 db.invites = db.invites || [];
 db.notifications = db.notifications || [];
+db.jobs = db.jobs || [];
 db.seq = db.seq || 1;
 
 function persist() {
