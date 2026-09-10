@@ -167,7 +167,7 @@ if [ "${NO_RESTART:-0}" = "1" ]; then
 fi
 
 if command -v pm2 >/dev/null 2>&1 && pm2 jlist 2>/dev/null | grep -q 'index\.js'; then
-  pm2 restart all >>"$LOG" 2>&1
+  pm2 restart all --update-env >>"$LOG" 2>&1
   log "已用 pm2 重启服务"
 else
   pkill -f 'server/index.js' 2>/dev/null

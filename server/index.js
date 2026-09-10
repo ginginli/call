@@ -5,11 +5,32 @@
  *  - Socket.IO:把通知实时推送给绑定的"教室端"
  */
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
 const http = require('http');
 const express = require('express');
 const { Server } = require('socket.io');
 const { db, persist, nextId } = require('./store');
+
+/* 载入项目根目录的 .env (无需额外依赖)。
+   已存在的环境变量优先, 不会被 .env 覆盖;
+   这样改完 .env 只要重启服务就生效, 不依赖 PM2 的环境变量快照。 */
+(function loadDotEnv() {
+  try {
+    const file = path.join(__dirname, '..', '.env');
+    if (!fs.existsSync(file)) return;
+    fs.readFileSync(file, 'utf8').split(/\r?\n/).forEach((line) => {
+      const m = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
+      if (!m) return;
+      let value = m[2].trim();
+      const quote = value[0];
+      if ((quote === '"' || quote === "'") && value.length > 1 && value[value.length - 1] === quote) {
+        value = value.slice(1, -1);
+      }
+      if (process.env[m[1]] === undefined) process.env[m[1]] = value;
+    });
+  } catch (e) { /* 忽略 .env 读取失败 */ }
+})();
 
 const PORT = Number(process.env.PORT || 3000);
 const ADMIN_KEY = process.env.CARD_KEY || 'siyunx-admin'; // 模拟"客服发卡"口令
