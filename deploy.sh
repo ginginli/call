@@ -3,10 +3,11 @@
 #  班级喊话系统 · 一键 / 自动更新脚本
 #
 #  用法(在服务器上执行):
-#    bash deploy.sh         立即更新一次(拉取 GitHub 最新代码并重启服务)
-#    bash deploy.sh cron    开启自动更新(每分钟检查一次, 有新提交就自动更新)
-#    bash deploy.sh stop    关闭自动更新
-#    bash deploy.sh status  查看当前版本 / 自动更新状态 / 最近更新记录
+#    bash deploy.sh              立即更新一次(拉取 GitHub 最新代码并重启服务)
+#    bash deploy.sh cron         开启自动更新(每分钟检查一次, 有新提交就自动更新)
+#    bash deploy.sh stop         关闭自动更新
+#    bash deploy.sh status       查看版本 / 自动更新状态 / 发卡口令状态
+#    bash deploy.sh key 新口令    修改发卡后台口令并重启(存到 .env, 永久生效)
 #
 #  放心: 数据文件 data/db.json 不会被动, 而且每次更新前会自动备份到 backups/
 # ============================================================
@@ -27,6 +28,15 @@ hash_of() {
 }
 
 cd "$APP_DIR" || exit 1
+
+# ---------------- 载入 .env (发卡口令等配置) ----------------
+# .env 不会被 git 更新覆盖, 所以配置能永久保留
+if [ -f "$APP_DIR/.env" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "$APP_DIR/.env"
+  set +a
+fi
 
 # ---------------- 子命令 ----------------
 case "${1:-}" in
@@ -54,9 +64,32 @@ case "${1:-}" in
     else
       echo "自动更新: 未开启"
     fi
+    if [ -n "${CARD_KEY:-}" ]; then
+      echo "发卡口令: 已自定义(保存在 .env 里)"
+    else
+      echo "发卡口令: 未设置(还是默认 siyunx-admin, 建议: bash deploy.sh key 新口令)"
+    fi
     echo "最近更新记录:"
     if [ -f "$LOG" ]; then tail -n 8 "$LOG"; else echo "  (还没有更新过)"; fi
     exit 0
+    ;;
+  key)
+    NEWKEY="${2:-}"
+    if [ -z "$NEWKEY" ]; then
+      echo "用法: bash deploy.sh key 你的新口令"
+      exit 1
+    fi
+    ENVF="$APP_DIR/.env"
+    TMP="$APP_DIR/.env.tmp"
+    touch "$ENVF"
+    grep -v '^[[:space:]]*CARD_KEY=' "$ENVF" > "$TMP" || true
+    printf 'CARD_KEY=%s\n' "$NEWKEY" >> "$TMP"
+    mv "$TMP" "$ENVF"
+    chmod 600 "$ENVF" 2>/dev/null
+    echo "已把新发卡口令写入 $APP_DIR/.env"
+    echo "(.env 不会提交到仓库, 也不会被自动更新覆盖)"
+    echo "正在重启服务让它生效 ..."
+    exec bash "$0" force
     ;;
 esac
 
@@ -79,15 +112,23 @@ if ! git fetch -q origin "$BRANCH" 2>/dev/null; then
 fi
 
 NEW="$(git rev-parse FETCH_HEAD)"
-OLD="$(git rev-parse HEAD 2>/dev/null || true)"
+OLD="$(git rev-parse --verify --quiet HEAD || true)"
+FORCE=0
+[ "${1:-}" = "force" ] && FORCE=1
 
-if [ -n "$OLD" ] && [ "$OLD" = "$NEW" ]; then
+if [ -n "$OLD" ] && [ "$OLD" = "$NEW" ] && [ "$FORCE" = "0" ]; then
   # 没有新代码: 静默退出(避免 cron 日志无限增长); 手动运行时给个提示
   [ -t 1 ] && echo "已是最新版本 (${NEW:0:7}), 无需更新"
   exit 0
 fi
 
-log "发现新版本: ${OLD:0:7} -> ${NEW:0:7}"
+if [ "$OLD" = "$NEW" ]; then
+  log "强制重启服务 (版本 ${NEW:0:7})"
+elif [ -z "$OLD" ]; then
+  log "首次部署: 更新到 ${NEW:0:7}"
+else
+  log "发现新版本: ${OLD:0:7} -> ${NEW:0:7}"
+fi
 
 # ---------------- 3. 备份数据 ----------------
 mkdir -p backups
@@ -97,7 +138,7 @@ if [ -f data/db.json ]; then
   log "已备份数据库到 backups/"
 fi
 
-# ---------------- 4. 更新代码(不碰 data/) ----------------
+# ---------------- 4. 更新代码(不碰 data/ 和 .env) ----------------
 if ! git reset -q --hard "$NEW"; then
   log "代码更新失败"
   exit 1

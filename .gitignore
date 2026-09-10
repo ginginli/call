@@ -20,6 +20,7 @@ npm-debug.log*
 # 环境变量(如有)
 .env
 .env.*
+!.env.example
 
 # 部署临时目录
 .deploy_tmp/

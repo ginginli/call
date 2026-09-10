@@ -233,18 +233,34 @@ app.post('/api/cards/generate', (req, res) => {
   res.json({ ok: true, codes: out });
 });
 
-/* 发卡后台: 查询库存(需发卡口令) */
+/* 发卡后台: 卡号明细(需发卡口令)。每张卡都带注册状态: 未使用 / 已注册(绑定到哪个账号) */
 app.post('/api/cards/list', (req, res) => {
-  const { adminKey } = req.body || {};
+  const { adminKey, q } = req.body || {};
   if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: '发卡口令错误' });
-  const unused = db.cards.filter((c) => !c.usedBy);
+  const userById = new Map(db.users.map((u) => [u.id, u]));
+  const all = db.cards.slice().reverse().map((c) => {
+    const u = c.usedBy ? userById.get(c.usedBy) : null;
+    return {
+      code: c.code,
+      type: c.type,
+      createdAt: c.createdAt,
+      status: c.usedBy ? 'used' : 'unused',
+      usedAt: c.usedAt || null,
+      user: u ? { username: u.username, createdAt: u.createdAt, type: u.type } : null,
+    };
+  });
+  const kw = String(q || '').trim().toLowerCase();
+  const list = kw
+    ? all.filter((c) => c.code.toLowerCase().includes(kw)
+      || (c.user && c.user.username.toLowerCase().includes(kw)))
+    : all;
   res.json({
-    total: db.cards.length,
-    used: db.cards.length - unused.length,
-    unusedOwner: unused.filter((c) => c.type !== 'co').length,
-    unusedCo: unused.filter((c) => c.type === 'co').length,
+    total: all.length,
+    used: all.filter((c) => c.status === 'used').length,
+    unusedOwner: all.filter((c) => c.status === 'unused' && c.type !== 'co').length,
+    unusedCo: all.filter((c) => c.status === 'unused' && c.type === 'co').length,
     usingDefaultKey: ADMIN_KEY === 'siyunx-admin',
-    cards: unused.slice(-60).reverse().map((c) => ({ code: c.code, type: c.type, createdAt: c.createdAt })),
+    cards: list.slice(0, 300),
   });
 });
 

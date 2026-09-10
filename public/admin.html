@@ -17,6 +17,13 @@
   .stat { display: flex; gap: 26px; flex-wrap: wrap; }
   .stat .n { font-size: 24px; font-weight: 800; line-height: 1.1; }
   .tip { font-size: 12.5px; margin: 10px 0 0; }
+  .tb-scroll { overflow-x: auto; margin-top: 6px; }
+  .tb { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .tb th, .tb td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  .tb th { font-size: 12px; font-weight: 700; color: #6b7280; }
+  .tb tr:last-child td { border-bottom: none; }
+  .tb .cd { letter-spacing: 1.5px; font-weight: 700; }
+  .mini { font-size: 11.5px; }
 </style>
 </head>
 <body>
@@ -37,30 +44,44 @@
     <div class="row" style="gap:8px;flex-wrap:wrap">
       <input class="inp grow" id="adminKey" type="password" placeholder="发卡口令 (CARD_KEY)" style="max-width:320px">
       <button class="btn btn-sm" onclick="toggleKey()" id="eyeBtn">显示</button>
-      <button class="btn btn-pri btn-sm" onclick="checkStock()">验证并查看库存</button>
+      <button class="btn btn-pri btn-sm" onclick="checkStock()">验证并查看</button>
     </div>
-    <p class="muted tip">口令就是服务端的环境变量 <code>CARD_KEY</code>，没设过的话默认是 <code>siyunx-admin</code>。口令只保存在本标签页，关掉就没了。</p>
+    <p class="muted tip">口令存在服务器的 <code>.env</code> 文件里。改口令：在服务器执行 <code>bash deploy.sh key 新口令</code>，改完立刻生效。口令只保存在本标签页，关掉就没了。</p>
   </div>
 
   <!-- 库存 -->
   <div class="card admin-card hide" id="stockCard">
     <div class="spread">
-      <h3 style="margin:0;font-size:15px">② 当前库存（还没被用掉的卡）</h3>
+      <h3 style="margin:0;font-size:15px">② 库存概览</h3>
       <button class="btn btn-sm" onclick="checkStock()">刷新</button>
     </div>
     <div class="stat" style="margin-top:14px">
-      <div><div class="n" id="stOwner">-</div><div class="muted" style="font-size:12px">普通激活卡</div></div>
-      <div><div class="n" id="stCo">-</div><div class="muted" style="font-size:12px">协同授权码</div></div>
-      <div><div class="n" id="stUsed">-</div><div class="muted" style="font-size:12px">已使用</div></div>
+      <div><div class="n" id="stOwner">-</div><div class="muted" style="font-size:12px">普通激活卡(未用)</div></div>
+      <div><div class="n" id="stCo">-</div><div class="muted" style="font-size:12px">协同授权码(未用)</div></div>
+      <div><div class="n" id="stUsed">-</div><div class="muted" style="font-size:12px">已注册使用</div></div>
     </div>
     <div class="hide" id="defaultKeyWarn" style="margin-top:14px;padding:9px 12px;border-radius:10px;background:#fef3e2;color:#b45309;font-size:13px;line-height:1.6">
-      警告：服务器还在用默认口令 <b>siyunx-admin</b>，知道网址的人都能自己发卡。建议重启服务时加上 <code>CARD_KEY=自己的口令</code>（详见下方说明）。
+      警告：服务器还在用默认口令 <b>siyunx-admin</b>，知道网址的人都能自己发卡。请在服务器执行 <code>bash deploy.sh key 你自己的口令</code> 立刻改掉。
     </div>
+  </div>
+
+  <!-- 卡号明细: 卡密 ↔ 注册状态 -->
+  <div class="card admin-card hide" id="listCard">
+    <div class="spread" style="gap:10px;flex-wrap:wrap">
+      <h3 style="margin:0;font-size:15px">③ 卡号明细（卡密 ↔ 注册状态）</h3>
+      <div class="row" style="gap:8px">
+        <input class="inp" id="q" placeholder="搜卡号 / 用户名" style="max-width:200px"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();checkStock();}">
+        <button class="btn btn-sm" onclick="checkStock()">搜索</button>
+      </div>
+    </div>
+    <p class="muted tip" id="listSum">共 0 张</p>
+    <div class="tb-scroll" id="cardTable"></div>
   </div>
 
   <!-- 发卡 -->
   <div class="card admin-card">
-    <h3 style="margin:0 0 4px;font-size:15px">③ 生成卡号</h3>
+    <h3 style="margin:0 0 4px;font-size:15px">④ 生成卡号</h3>
     <p class="muted tip" style="margin-bottom:14px">普通激活卡：卖给老师，注册后自带 2 个班级。协同授权码：给协同老师用，能加入别人的班级、不能建班。</p>
     <div class="row" style="gap:10px;flex-wrap:wrap">
       <select class="inp sel" id="cardType" style="max-width:240px">
@@ -76,7 +97,7 @@
   <!-- 结果 -->
   <div class="card admin-card hide" id="resultCard">
     <div class="spread" style="margin-bottom:12px">
-      <h3 style="margin:0;font-size:15px">④ 本次生成 <span id="resCount">0</span> 张</h3>
+      <h3 style="margin:0;font-size:15px">⑤ 本次生成 <span id="resCount">0</span> 张</h3>
       <div class="row" style="gap:8px">
         <button class="btn btn-sm" onclick="copyAll()">复制全部</button>
         <button class="btn btn-sm" onclick="clearResult()">清空</button>
@@ -122,25 +143,77 @@ async function post(url, body) {
   return data;
 }
 
+function fmtTime(t) {
+  if (!t) return '-';
+  const d = new Date(t);
+  if (isNaN(d.getTime())) return '-';
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 async function checkStock(silent) {
   const k = keyOf();
   if (!k) return;
   try {
-    const d = await post('/api/cards/list', { adminKey: k });
+    const d = await post('/api/cards/list', { adminKey: k, q: ($('q').value || '').trim() });
     sessionStorage.setItem('adminKey', k);
     $('stockCard').classList.remove('hide');
+    $('listCard').classList.remove('hide');
     $('keyTag').textContent = '口令已验证';
     $('keyTag').className = 'badge badge-ok';
     $('stOwner').textContent = d.unusedOwner;
     $('stCo').textContent = d.unusedCo;
     $('stUsed').textContent = d.used;
     $('defaultKeyWarn').classList.toggle('hide', !d.usingDefaultKey);
+    renderList(d);
     if (!silent) toast('口令正确', 'ok');
   } catch (e) {
     $('keyTag').textContent = '口令未验证';
     $('keyTag').className = 'badge';
     if (!silent) toast(e.message, 'err');
   }
+}
+
+/* 卡号明细: 未使用 / 已注册(绑定到哪个账号) */
+function renderList(d) {
+  const cards = d.cards || [];
+  const usedCount = cards.filter((c) => c.status === 'used').length;
+  const kw = ($('q').value || '').trim();
+  $('listSum').textContent = kw
+    ? `筛选出 ${cards.length} 张（已注册 ${usedCount} 张）`
+    : `全部 ${(d.total || 0)} 张 · 其中已注册 ${(d.used || 0)} 张 · 未使用 ${(d.total || 0) - (d.used || 0)} 张`;
+
+  const box = $('cardTable');
+  if (!cards.length) {
+    box.innerHTML = '<p class="muted tip">没有匹配的卡号</p>';
+    return;
+  }
+  const rows = cards.map((c) => {
+    const isCo = c.type === 'co';
+    const used = c.status === 'used';
+    const st = used
+      ? '<span class="badge badge-ok">已注册</span>'
+      : '<span class="badge">未使用</span>';
+    const who = used && c.user
+      ? `<b>${esc(c.user.username)}</b><br><span class="muted mini">${fmtTime(c.usedAt)} 注册</span>`
+      : '<span class="muted">—</span>';
+    const act = used ? '' : `<button class="btn btn-sm" onclick="copyOne('${esc(c.code)}')">复制</button>`;
+    return `<tr>
+      <td class="cd mono">${esc(c.code)}</td>
+      <td><span class="badge ${isCo ? 'badge-pri' : 'badge-ok'} mini">${isCo ? '协同' : '普通'}</span></td>
+      <td>${st}</td>
+      <td>${who}</td>
+      <td class="muted mini">${fmtTime(c.createdAt)}</td>
+      <td>${act}</td>
+    </tr>`;
+  }).join('');
+
+  box.innerHTML = `<table class="tb">
+    <thead><tr>
+      <th>卡号</th><th>类型</th><th>状态</th><th>绑定账号</th><th>生成时间</th><th></th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
 }
 
 async function genCards() {
