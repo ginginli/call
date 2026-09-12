@@ -73,7 +73,6 @@ function boot() {
   renderInvites();
   renderJoinBox();
   renderQuotaTip();
-  onDurChange();
   curId = curId && ME.classes.some((c) => c.id === curId) ? curId : (ME.classes[0] ? ME.classes[0].id : null);
   if (curId) selectClass(curId);
   else showEmpty();
@@ -411,16 +410,21 @@ function fmtDuration(s) {
   return m === 0 ? h + '小时' : h + '小时' + m + '分';
 }
 function durVal() {
-  const mode = document.getElementById('selDuration').value;
+  const sel = document.getElementById('selDuration');
+  if (!sel) return 0;
+  const mode = sel.value;
   if (mode === '-1') return -1;
   const inp = document.getElementById('inpDurNum');
+  if (!inp) return 0;
   let n = Math.floor(Number(inp.value));
   if (!Number.isFinite(n) || n < 1) { n = 1; inp.value = 1; } // 未填或填 0 时按 1 个单位
   const sec = mode === 'hour' ? n * 3600 : n * 60;
   return Math.min(sec, 14400); // 最长 4 小时
 }
 function onDurChange() {
-  const mode = document.getElementById('selDuration').value;
+  const sel = document.getElementById('selDuration');
+  if (!sel) return;
+  const mode = sel.value;
   const wrap = document.getElementById('durInputWrap');
   const unit = document.getElementById('durUnit');
   const tip = document.getElementById('durTip');
