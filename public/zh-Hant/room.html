@@ -1,66 +1,66 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Class Broadcast · Classroom</title>
+<title>班級喊話 · 教室端</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <div class="room-stage">
 
-  <!-- top bar -->
+  <!-- 頂部 -->
   <div class="room-top" id="topBar">
     <div class="row" style="gap:10px">
-      <span style="font-weight:700;font-size:16px">📢 Classroom display</span>
-      <span class="chip" id="stateChip"><span class="dot gray" id="stateDot"></span><span id="stateText">Disconnected</span></span>
+      <span style="font-weight:700;font-size:16px">📢 教室喊話端</span>
+      <span class="chip" id="stateChip"><span class="dot gray" id="stateDot"></span><span id="stateText">未連線</span></span>
     </div>
     <div class="row" style="flex-wrap:wrap;gap:8px">
       <span class="language-list on-dark" style="margin-right:4px">
         <a href="/room" title="简体中文">简体</a>
-        <a href="/zh-Hant/room" title="繁體中文">繁體</a>
-        <a class="curr" href="/en/room" title="English">English</a>
+        <a class="curr" href="/zh-Hant/room" title="繁體中文">繁體</a>
+        <a href="/en/room" title="English">English</a>
       </span>
-      <button class="btn btn-sm" id="btnSound" onclick="toggleSound()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">🔊 Sound on</button>
-      <button class="btn btn-sm" onclick="toggleFull()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⛶ Fullscreen</button>
-      <button class="btn btn-sm" onclick="doTest()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">Test</button>
-      <button class="btn btn-sm btn-danger" onclick="doUnbind()">Unbind</button>
-      <button class="btn btn-sm" id="btnMinWait" onclick="toggleWaitMode()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">📥 Minimize</button>
-      <button class="btn btn-sm" id="btnAuto" onclick="toggleAutoLaunch()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⚡ Auto start: off</button>
-      <button class="btn btn-sm" id="btnDesktopExit" onclick="desktopQuit()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⏻ Exit</button>
+      <button class="btn btn-sm" id="btnSound" onclick="toggleSound()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">🔊 聲音開</button>
+      <button class="btn btn-sm" onclick="toggleFull()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⛶ 全螢幕</button>
+      <button class="btn btn-sm" onclick="doTest()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">測試播報</button>
+      <button class="btn btn-sm btn-danger" onclick="doUnbind()">解除綁定</button>
+      <button class="btn btn-sm" id="btnMinWait" onclick="toggleWaitMode()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">📥 最小化待命</button>
+      <button class="btn btn-sm" id="btnAuto" onclick="toggleAutoLaunch()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⚡ 開機自動啟動:關</button>
+      <button class="btn btn-sm" id="btnDesktopExit" onclick="desktopQuit()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⏻ 結束教室端</button>
     </div>
   </div>
 
-  <!-- bind -->
+  <!-- 綁定 -->
   <div class="room-main" id="setupPanel">
     <form class="bind-card" onsubmit="return doBind(event)">
-      <h2>Bind a class</h2>
-      <p class="sub">After the teacher creates a class in the console, enter the <b>bind code</b> here. You only bind once — it reconnects automatically at startup.</p>
-      <label class="lbl" style="color:#c7cddd">Class bind code</label>
-      <input class="inp mono" id="codeInp" maxlength="12" placeholder="Enter the class bind code" autocomplete="off" required>
+      <h2>綁定班級</h2>
+      <p class="sub">請老師在後台建立班級後，將 <b>綁定碼</b> 填入此處。綁定一次即可，之後開機自動連線。</p>
+      <label class="lbl" style="color:#c7cddd">班級綁定碼</label>
+      <input class="inp mono" id="codeInp" maxlength="12" placeholder="輸入班級綁定碼" autocomplete="off" required>
       <div style="height:16px"></div>
-      <button class="btn btn-pri btn-block" type="submit" id="bindBtn">Connect and start receiving</button>
+      <button class="btn btn-pri btn-block" type="submit" id="bindBtn">連線並開始接收通知</button>
     </form>
   </div>
 
-  <!-- waiting -->
+  <!-- 等待 -->
   <div class="room-main hide" id="mainPanel">
     <div class="waiting" style="text-align:center">
       <span class="chip" style="font-size:18px;padding:10px 20px">
         <span class="dot" id="mainDot"></span>
-        <span id="className">Connecting…</span>
+        <span id="className">正在連線…</span>
       </span>
     </div>
     <div class="big-clock" id="clock">--:--</div>
-    <div class="pulse" style="letter-spacing:6px;color:#a5b4fc;font-size:18px">Listening for notices</div>
+    <div class="pulse" style="letter-spacing:6px;color:#a5b4fc;font-size:18px">正在監聽通知</div>
     <div id="unlockPill" class="chip hide" onclick="unlockAudio()" style="cursor:pointer;border-color:#fbbf24;color:#fde68a">
-      🔊 Tap here to enable voice
+      🔊 點選此處開啟語音播報
     </div>
-    <div style="color:#6b7280;font-size:13px" id="roomHint">When a notice arrives it goes full-screen and is read aloud</div>
+    <div style="color:#6b7280;font-size:13px" id="roomHint">收到老師通知後會自動全螢幕彈出並語音播報</div>
   </div>
 </div>
 
-<!-- full-screen notice overlay -->
+<!-- 通知全螢幕彈出層 -->
 <div class="ov hide" id="overlay">
   <div class="ov-inner">
     <div class="ov-head" id="ovHead">
@@ -70,15 +70,15 @@
     <div class="ov-body"><div class="txt" id="ovText"></div></div>
     <div class="ov-foot">
       <span id="ovFrom"></span>
-      <span id="ovFootHint">Class Broadcast System · Tap ✕ to close</span>
+      <span id="ovFootHint">班級喊話系統 · 點選右上角關閉</span>
     </div>
   </div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/en/common.js"></script>
+<script src="/zh-Hant/common.js"></script>
 <script>
-/* ---------- state ---------- */
+/* ---------- 狀態 ---------- */
 let code = localStorage.getItem('room_code') || '';
 let soundOn = localStorage.getItem('room_sound') !== '0';
 let audioUnlocked = false;
@@ -86,19 +86,23 @@ let className = '';
 let classColor = '#4f46e5';
 let overlayTimer = null;
 let lastRead = '';
-let waitMode = localStorage.getItem('room_waitmode') === '1'; // desktop standby: minimized until a notice arrives
-let openedByNotify = false; // whether the window was opened by a notice (auto-hides afterwards)
-let manualBind = false; // whether the teacher re-bound manually (do not auto-hide in that case)
+let waitMode = localStorage.getItem('room_waitmode') === '1'; // 桌面端待命模式:平時最小化,通知自動彈出
+let openedByNotify = false; // 本次是否由通知彈出(彈完自動收回)
+let manualBind = false; // 是否是老師手動重新綁定(手動綁定時不自動收走視窗)
 
 const socket = io();
 
-/* ---------- voice ---------- */
-let enVoice = null;
+/* ---------- 語音 ---------- */
+let zhVoice = null;
 function pickVoice() {
   try {
     const vs = speechSynthesis.getVoices();
-    enVoice = vs.find((v) => /^en/i.test(v.lang)) || vs.find((v) => /English/i.test(v.name)) || null;
-  } catch (e) { enVoice = null; }
+    // 優先台灣中文語音, 其次任何中文語音
+    zhVoice = vs.find((v) => /^zh[-_]TW/i.test(v.lang))
+      || vs.find((v) => /^zh[-_]Hant/i.test(v.lang))
+      || vs.find((v) => /^zh/i.test(v.lang))
+      || vs.find((v) => /Chinese|Mandarin/i.test(v.name)) || null;
+  } catch (e) { zhVoice = null; }
 }
 if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 
@@ -116,12 +120,12 @@ function speak(text) {
   if (!window.speechSynthesis || !audioUnlocked) return;
   try {
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'en-US';
+    u.lang = 'zh-TW';
     u.rate = 1.05;
-    if (enVoice) u.voice = enVoice;
+    if (zhVoice) u.voice = zhVoice;
     speechSynthesis.cancel();
     speechSynthesis.speak(u);
-  } catch (e) { /* ignore */ }
+  } catch (e) { /* 略過 */ }
 }
 
 function beep() {
@@ -138,10 +142,10 @@ function beep() {
       g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
       o.start(t); o.stop(t + 0.18);
     });
-  } catch (e) { /* ignore */ }
+  } catch (e) { /* 略過 */ }
 }
 
-/* ---------- bind / state ---------- */
+/* ---------- 綁定 / 狀態 ---------- */
 function setState(txt, ok) {
   document.getElementById('stateText').textContent = txt;
   const d = document.getElementById('stateDot');
@@ -153,7 +157,7 @@ function setState(txt, ok) {
 function showSetup() {
   document.getElementById('mainPanel').classList.add('hide');
   document.getElementById('setupPanel').classList.remove('hide');
-  setState('Not bound', false);
+  setState('未綁定', false);
 }
 
 function showMain() {
@@ -167,17 +171,17 @@ async function doBind(e) {
   if (!val) return;
   code = val;
   manualBind = true;
-  unlockAudio(); // user gesture = audio allowed
-  setState('Binding…', null);
+  unlockAudio(); // 使用者點擊 = 允許語音
+  setState('正在綁定…', null);
   document.getElementById('bindBtn').disabled = true;
   socket.emit('bind', { code });
 }
 
 socket.on('connect', () => {
-  if (code) { setState('Reconnecting…', null); socket.emit('bind', { code }); }
+  if (code) { setState('正在重連…', null); socket.emit('bind', { code }); }
 });
 socket.on('disconnect', () => {
-  if (code) setState('Network lost — reconnecting…', false);
+  if (code) setState('網路中斷，重連中…', false);
 });
 
 socket.on('bound', (r) => {
@@ -187,21 +191,21 @@ socket.on('bound', (r) => {
     localStorage.setItem('room_code', code);
     className = r.className;
     classColor = r.color || classColor;
-    document.getElementById('className').textContent = 'Bound · ' + className;
+    document.getElementById('className').textContent = '已綁定 · ' + className;
     document.getElementById('mainDot').classList.remove('gray');
-    document.getElementById('roomHint').textContent = 'Class “' + className + '” is bound. New notices play full-screen with voice.';
+    document.getElementById('roomHint').textContent = '班級【' + className + '】已綁定，收到通知自動全螢幕播報。';
     showMain();
-    setState('Online · Receiving', true);
+    setState('線上 · 接收中', true);
     if (!audioUnlocked) document.getElementById('unlockPill').classList.remove('hide');
-    toast('Bound successfully: ' + className, 'ok');
+    toast('綁定成功：' + className, 'ok');
     tickClock(); setInterval(tickClock, 1000);
-    // standby mode (auto-start restore): hide to the taskbar once binding is confirmed
+    // 待命模式(開機自動啟動還原時):綁定確認後自動收到工作列待命
     if (waitMode && window.desktopApp && !manualBind) setTimeout(() => { try { window.desktopApp.minimize(); } catch (e) {} }, 900);
   } else {
     code = ''; localStorage.removeItem('room_code');
     showSetup();
-    setState('Bind failed', false);
-    toast(r.error || 'Bind failed', 'err');
+    setState('綁定失敗', false);
+    toast(r.error || '綁定失敗', 'err');
   }
 });
 
@@ -220,7 +224,7 @@ socket.on('rebind', (m) => {
   closeOverlay();
   speechSynthesis.cancel && speechSynthesis.cancel();
   showSetup();
-  toast((m && m.reason) || 'The bind code changed — please bind again', 'err');
+  toast((m && m.reason) || '綁定碼已更新，請重新綁定', 'err');
 });
 
 socket.on('minimize', () => {
@@ -230,61 +234,61 @@ socket.on('minimize', () => {
   }
 });
 
-/* ---------- notice overlay ---------- */
+/* ---------- 通知彈出層 ---------- */
 function displayMs(m) {
   const len = (m.content || '').length;
-  if (m.duration === -1) return 0; // teacher chose "do not auto-close": stays until closed manually
+  if (m.duration === -1) return 0; // 老師選了「不自動關閉」: 一直顯示, 手動關了才收起
   if (typeof m.duration === 'number' && m.duration > 0) {
-    // teacher configured a duration; if the speech is longer, wait for it to finish
+    // 老師設定了停留時長; 若語音較長則至少等語音播完再收起
     const cfgMs = m.duration * 1000;
     const speakMs = Math.min(len * 250, 60000);
     return Math.max(cfgMs, speakMs);
   }
-  return Math.max(12000, Math.min(len * 400, 60000)); // default: 12–60s based on length
+  return Math.max(12000, Math.min(len * 400, 60000)); // 預設: 依字數 12~60 秒
 }
 function showNotify(m) {
   lastRead = m.content;
   document.getElementById('ovHead').style.background = m.color || '#e11d48';
-  document.getElementById('ovTag').textContent = '📢 ' + (m.className || 'Class notice');
+  document.getElementById('ovTag').textContent = '📢 ' + (m.className || '班級通知');
   document.getElementById('ovText').textContent = m.content;
-  document.getElementById('ovFrom').textContent = 'From: ' + (m.fromName || '') + ' · ' + (m.sentAt ? fmtTime(m.sentAt) : '');
+  document.getElementById('ovFrom').textContent = '來源：' + (m.fromName || '') + ' · ' + (m.sentAt ? fmtTime(m.sentAt) : '');
   const ov = document.getElementById('overlay');
   ov.classList.remove('hide');
   if (document.fullscreenEnabled) { try { if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); } catch (e) {} }
   const stay = displayMs(m);
   const hint = document.getElementById('ovFootHint');
-  if (hint) hint.textContent = stay === 0 ? 'Manual close · tap ✕' : 'Class Broadcast System · Tap ✕ to close';
+  if (hint) hint.textContent = stay === 0 ? '需手動關閉 · 點選右上角 ✕' : '班級喊話系統 · 點選右上角關閉';
   clearTimeout(overlayTimer);
-  overlayTimer = stay > 0 ? setTimeout(closeOverlay, stay) : null; // 0 = do not auto-close
+  overlayTimer = stay > 0 ? setTimeout(closeOverlay, stay) : null; // 0 = 不自動關閉
 }
 function closeOverlay() {
   document.getElementById('overlay').classList.add('hide');
   clearTimeout(overlayTimer);
-  // in standby mode, hide to the taskbar after the notice so it does not cover the screen
+  // 待命模式下,通知播完自動收到工作列,不佔螢幕
   if (waitMode && openedByNotify && window.desktopApp) {
     openedByNotify = false;
     setTimeout(() => { try { window.desktopApp.minimize(); } catch (e) {} }, 400);
   }
 }
 
-/* ---------- buttons ---------- */
+/* ---------- 按鈕 ---------- */
 function toggleSound() {
   soundOn = !soundOn;
   localStorage.setItem('room_sound', soundOn ? '1' : '0');
-  document.getElementById('btnSound').textContent = soundOn ? '🔊 Sound on' : '🔇 Sound off';
+  document.getElementById('btnSound').textContent = soundOn ? '🔊 聲音開' : '🔇 聲音關';
   if (soundOn) unlockAudio();
   else { try { speechSynthesis.cancel(); } catch (e) {} }
-  toast(soundOn ? 'Voice on' : 'Voice off', 'ok');
+  toast(soundOn ? '語音播報已開啟' : '語音播報已關閉', 'ok');
 }
 
 function doTest() {
   unlockAudio();
   if (className) {
     beep();
-    showNotify({ content: 'Test: sound and notice reception are working.', className, color: '#2563eb', fromName: 'Local test', sentAt: null, voice: true });
-    speak('Test: sound and notice reception are working.');
+    showNotify({ content: '測試播報：聲音正常，通知正常接收。', className, color: '#2563eb', fromName: '本機測試', sentAt: null, voice: true });
+    speak('測試播報：聲音正常，通知正常接收。');
   } else {
-    toast('Please bind a class first', 'err');
+    toast('請先綁定班級', 'err');
   }
 }
 
@@ -293,7 +297,7 @@ function doUnbind() {
   localStorage.removeItem('room_code');
   closeOverlay();
   showSetup();
-  toast('Unbound', 'ok');
+  toast('已解除綁定', 'ok');
 }
 
 function toggleFull() {
@@ -308,11 +312,11 @@ function desktopQuit() {
   else toggleFull();
 }
 
-/* desktop shell shows the "auto start" and "exit" buttons */
+/* 桌面教室端殼裡顯示「開機自動啟動」與「結束教室端」按鈕 */
 let autoLaunch = false;
 function renderAutoBtn() {
   const b = document.getElementById('btnAuto');
-  if (b) b.textContent = '⚡ Auto start: ' + (autoLaunch ? 'on' : 'off');
+  if (b) b.textContent = '⚡ 開機自動啟動:' + (autoLaunch ? '開' : '關');
 }
 async function toggleAutoLaunch() {
   const b = document.getElementById('btnAuto');
@@ -320,15 +324,15 @@ async function toggleAutoLaunch() {
   if (b) b.disabled = true;
   try {
     const r = await window.desktopApp.setAutoLaunch(want);
-    if (r && r.ok) { autoLaunch = !!r.value; renderAutoBtn(); toast('Auto start ' + (autoLaunch ? 'enabled' : 'disabled'), 'ok'); }
-    else toast((r && r.error) || 'Failed to save', 'err');
-  } catch (e) { toast('Failed to save', 'err'); }
+    if (r && r.ok) { autoLaunch = !!r.value; renderAutoBtn(); toast('開機自動啟動已' + (autoLaunch ? '開啟' : '關閉') + '，下次開機自動進入本螢幕', 'ok'); }
+    else toast((r && r.error) || '設定失敗', 'err');
+  } catch (e) { toast('設定失敗', 'err'); }
   if (b) b.disabled = false;
 }
 function renderWaitBtn() {
   const el = document.getElementById('btnMinWait');
   if (!el) return;
-  el.textContent = waitMode ? '📌 Keep on screen' : '📥 Minimize';
+  el.textContent = waitMode ? '📌 固定在螢幕上顯示' : '📥 最小化待命';
 }
 function setWaitMode(v) {
   waitMode = !!v;
@@ -338,7 +342,7 @@ function setWaitMode(v) {
 }
 function toggleWaitMode() {
   setWaitMode(!waitMode);
-  toast(waitMode ? 'Standby on: it stays in the taskbar and pops up automatically for each notice, then hides again.' : 'Switched back to always-visible mode.', 'ok');
+  toast(waitMode ? '待命模式已開啟：平時收在工作列，收到老師通知會自動彈出並播報，播完自動收回' : '已切回常顯模式：螢幕保持顯示待機畫面', 'ok');
 }
 if (window.desktopApp) {
   const b = document.getElementById('btnDesktopExit');
@@ -359,15 +363,15 @@ function tickClock() {
   el.textContent = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
 }
 
-/* ---------- start ---------- */
-if (soundOn) document.getElementById('btnSound').textContent = '🔊 Sound on';
-else document.getElementById('btnSound').textContent = '🔇 Sound off';
+/* ---------- 啟動 ---------- */
+if (soundOn) document.getElementById('btnSound').textContent = '🔊 聲音開';
+else document.getElementById('btnSound').textContent = '🔇 聲音關';
 if (code) {
   showMain();
-  setState('Connecting…', null);
-  document.getElementById('className').textContent = 'Connecting…';
-  socket.emit('bind', { code }); // socket may not be ready yet; the connect event covers it
-  // if already connected (connect fired), it will not fire again — handle that here
+  setState('正在連線…', null);
+  document.getElementById('className').textContent = '正在連線…';
+  socket.emit('bind', { code }); // socket 可能未就緒, 依賴 connect 事件兜底
+  // 若已連線過(connect已觸發)不會再次觸發, 這裡做相容
   if (socket.connected) socket.emit('bind', { code });
 } else {
   showSetup();

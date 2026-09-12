@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>班級喊話系統 · 網頁發通知，教室全螢幕自動播報</title>
+<meta name="description" content="老師在辦公室或手機上發一則通知，教室電腦立刻全螢幕彈出並語音播報。不用裝 App，不用跑教室，輸入綁定碼即可使用。免費申請啟用卡號。">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/landing.css">
+</head>
+<body class="lp">
+
+<!-- 頂部導覽 -->
+<header class="lp-nav">
+  <div class="lp-wrap lp-nav-in">
+    <a class="lp-logo" href="/zh-Hant/">
+      <span class="lp-logo-ico">📢</span>
+      <span>班級喊話系統</span>
+    </a>
+    <nav class="lp-links">
+      <a href="#features">功能</a>
+      <a href="#what">是什麼</a>
+      <a href="#how">使用流程</a>
+      <a href="#why">為什麼選我們</a>
+      <a href="#faq">常見問題</a>
+      <a href="#price">卡號</a>
+    </nav>
+    <div class="lp-nav-act">
+      <span class="language-list">
+        <a href="/" title="简体中文">简体</a>
+        <a class="curr" href="/zh-Hant/" title="繁體中文">繁體</a>
+        <a href="/en/" title="English">English</a>
+      </span>
+      <a class="btn btn-sm" href="/zh-Hant/login">登入</a>
+      <a class="btn btn-pri btn-sm" href="#card">免費申請卡號</a>
+    </div>
+  </div>
+</header>
+
+<!-- 首屏 -->
+<section class="lp-hero">
+  <div class="lp-wrap lp-hero-in">
+    <div class="lp-hero-txt">
+      <span class="lp-pill">網頁發通知 · 教室自動全螢幕播報</span>
+      <h1>老師不用跑教室，<br><em>一句話全螢幕播到班</em></h1>
+      <p class="lp-lead">
+        在辦公室或手機上敲一句話，教室大螢幕立刻全螢幕彈出並語音朗讀。
+        不需要裝 App，不需要學生端設備，一台能上網的電腦就夠。
+      </p>
+      <div class="lp-cta">
+        <a class="btn btn-pri lp-btn-lg" href="#card">免費申請啟用卡號</a>
+        <a class="btn lp-btn-lg" href="/zh-Hant/login">已有帳號，直接登入</a>
+      </div>
+      <p class="lp-cta-note">
+        申請方式：填寫聯絡電子信箱<a href="#card">線上提交申請</a>，或寄信到
+        <b class="mono">ladyiney25@gmail.com</b>，1 個工作日內回覆。
+      </p>
+      <ul class="lp-trust">
+        <li>✅ 免安裝</li>
+        <li>✅ 全螢幕 + 語音</li>
+        <li>✅ 支援定時播報</li>
+        <li>✅ 手機也能發</li>
+      </ul>
+    </div>
+
+    <!-- 示意圖：老師端 → 教室大螢幕 -->
+    <div class="lp-mock" aria-hidden="true">
+
+      <!-- ① 老師端（辦公室電腦 / 手機） -->
+      <div class="lp-mock-console">
+        <div class="lp-mock-bar">
+          <span></span><span></span><span></span>
+          <i>老師端 · 辦公室電腦 / 手機</i>
+          <b>已連線</b>
+        </div>
+        <div class="lp-mock-body">
+          <div class="lp-mock-input">請三年二班同學到操場集合</div>
+          <div class="lp-mock-btn">發送 📢</div>
+        </div>
+      </div>
+
+      <!-- ② 傳輸 -->
+      <div class="lp-mock-link"><span>⚡ 瞬間送達教室大螢幕</span></div>
+
+      <!-- ③ 教室現場：掛在牆上的大螢幕 -->
+      <div class="lp-mock-room">
+        <div class="lp-mock-walltag">
+          <span>🏫 三年二班 · 教室</span>
+          <span class="lp-mock-online"><i></i>大螢幕線上</span>
+        </div>
+
+        <div class="lp-mock-tv">
+          <div class="lp-mock-screen">
+            <!-- 通知鋪滿整塊螢幕 = 教室大螢幕全螢幕播報 -->
+            <div class="lp-mock-ov">
+              <div class="lp-mock-ovhead">
+                <span class="lp-mock-ovtag">📢 三年二班</span>
+                <span class="lp-mock-ovsub">教室大螢幕 · 全螢幕播報中</span>
+              </div>
+              <div class="lp-mock-ovtext">請三年二班同學<br>到操場集合</div>
+              <div class="lp-mock-ovfoot">
+                <span class="lp-mock-src">來源：王老師 · 14:30</span>
+                <span class="lp-mock-voice">
+                  <span class="lp-mock-wave"><i></i><i></i><i></i><i></i></span>
+                  🔊 正在語音播報…
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="lp-mock-tvbase">
+            <span>◉ CLASS DISPLAY · 65"</span>
+            <span class="lp-mock-led"></span>
+          </div>
+        </div>
+
+        <div class="lp-mock-desks">
+          <span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 功能 -->
+<section class="lp-sec" id="features">
+  <div class="lp-wrap">
+    <div class="lp-sec-head">
+      <h2>把教室變成一塊「會說話的公告螢幕」</h2>
+      <p>老師端的每一次點擊，教室端都是全螢幕彈出視窗 + 語音播報，不佔用上課時間。</p>
+    </div>
+    <div class="lp-grid">
+      <div class="lp-card">
+        <div class="lp-ico">🖥️</div>
+        <h3>全螢幕彈出播報</h3>
+        <p>通知發出後，教室電腦立刻全螢幕顯示，後排學生也看得一清二楚，不再靠課間跑腿傳話。</p>
+      </div>
+      <div class="lp-card">
+        <div class="lp-ico">🔊</div>
+        <h3>自動語音朗讀</h3>
+        <p>彈出視窗同時把內容唸出來，跑操集合、臨時調課這種場景，學生邊收拾邊聽得到。</p>
+      </div>
+      <div class="lp-card">
+        <div class="lp-ico">🔗</div>
+        <h3>8 位綁定碼連線</h3>
+        <p>教室電腦打開「教室端」輸入綁定碼即可，換電腦、重裝系統都不用再設定。</p>
+      </div>
+      <div class="lp-card">
+        <div class="lp-ico">⏰</div>
+        <h3>定時 / 每日播報</h3>
+        <p>提前排好時間，到時自動播。比如每天 8:00 早讀提醒、每週一升旗集合。</p>
+      </div>
+      <div class="lp-card">
+        <div class="lp-ico">👥</div>
+        <h3>協同老師一起用</h3>
+        <p>班主任產生邀請碼，任課老師、副班主任用協同授權碼加入，都能直接發通知。</p>
+      </div>
+      <div class="lp-card">
+        <div class="lp-ico">🧾</div>
+        <h3>通知留痕可回看</h3>
+        <p>最近 10 則通知完整保留：誰發的、什麼時候發的、有沒有送達，一目了然。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 是什麼 -->
+<section class="lp-sec lp-sec-alt" id="what">
+  <div class="lp-wrap">
+    <div class="lp-sec-head">
+      <h2>什麼是班級喊話系統？</h2>
+      <p>一句話：把教室裡那台電腦，變成一塊「聽得見」的公告螢幕。</p>
+    </div>
+    <div class="lp-what">
+      <div class="lp-what-txt">
+        <p>
+          它是一套給學校用的網頁通知工具。老師在任何一台能上網的電腦或手機上，用瀏覽器打開老師端，
+          敲一句話、點發送；教室裡的電腦會立刻全螢幕彈出這則通知，並自動語音朗讀一遍。
+        </p>
+        <p>
+          學生不需要帶手機或平板，也不用裝任何 App。教室電腦打開一個網址、輸入 8 位綁定碼就完成配對，
+          之後老師不出辦公室，全班也能第一時間聽到通知。
+        </p>
+      </div>
+      <ul class="lp-what-list">
+        <li>
+          <b>老師端（網頁）</b>
+          <span>手機、辦公室電腦的瀏覽器打開即用，負責發通知、看歷史記錄。</span>
+        </li>
+        <li>
+          <b>教室端（教室電腦）</b>
+          <span>教室電腦上常駐的一個頁面，綁定後負責全螢幕彈出視窗和語音播報。</span>
+        </li>
+        <li>
+          <b>後台服務</b>
+          <span>連接兩端的「中轉站」：帳號、班級、綁定碼和通知轉發都在這裡。</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 使用流程 -->
+<section class="lp-sec" id="how">
+  <div class="lp-wrap">
+    <div class="lp-sec-head">
+      <h2>四步就能用起來</h2>
+      <p>從申請卡號到第一次喊話，通常 10 分鐘內完成。</p>
+    </div>
+    <ol class="lp-steps">
+      <li>
+        <span class="lp-step-n">1</span>
+        <h3>申請啟用卡號</h3>
+        <p>填寫聯絡電子信箱<a href="#card">線上提交申請</a>，或寄信到 <b class="mono">ladyiney25@gmail.com</b>。</p>
+      </li>
+      <li>
+        <span class="lp-step-n">2</span>
+        <h3>註冊帳號</h3>
+        <p>在<a href="/zh-Hant/login#reg">註冊頁</a>填寫卡號、使用者名稱和密碼，註冊成功直接進入後台。</p>
+      </li>
+      <li>
+        <span class="lp-step-n">3</span>
+        <h3>建立班級拿綁定碼</h3>
+        <p>後台新建班級，系統給出一個 8 位綁定碼，把這個碼放到教室電腦上。</p>
+      </li>
+      <li>
+        <span class="lp-step-n">4</span>
+        <h3>教室端綁定，開始喊話</h3>
+        <p>教室電腦打開<a href="/zh-Hant/room">教室端</a>輸入綁定碼，此後每次發通知都會全螢幕播報。</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- 為什麼選我們 -->
+<section class="lp-sec lp-sec-alt" id="why">
+  <div class="lp-wrap">
+    <div class="lp-sec-head">
+      <h2>為什麼選擇班級喊話系統</h2>
+      <p>通知要「傳得到、看得清、聽得到、查得到」，和常見做法比一比。</p>
+    </div>
+    <div class="lp-cmp-wrap">
+      <table class="lp-cmp">
+        <thead>
+          <tr>
+            <th>對比項</th>
+            <th class="lp-cmp-us">班級喊話系統</th>
+            <th>微信群 / QQ 群發訊息</th>
+            <th>校園廣播 / 跑到教室說</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>老師要不要跑教室</td>
+            <td class="lp-cmp-us">不用，在辦公室就能發</td>
+            <td>不用</td>
+            <td>要跑一趟，或去廣播室</td>
+          </tr>
+          <tr>
+            <td>學生要不要帶手機</td>
+            <td class="lp-cmp-us">不需要，教室電腦就夠</td>
+            <td>得有人在看手機</td>
+            <td>不需要</td>
+          </tr>
+          <tr>
+            <td>後排學生看得清嗎</td>
+            <td class="lp-cmp-us">全螢幕大字，一眼看清</td>
+            <td>容易被聊天洗上去</td>
+            <td>看得清，但得人正好在</td>
+          </tr>
+          <tr>
+            <td>會不會自動唸出來</td>
+            <td class="lp-cmp-us">自動語音朗讀</td>
+            <td>不會</td>
+            <td>靠自己喊</td>
+          </tr>
+          <tr>
+            <td>能不能定時自動播</td>
+            <td class="lp-cmp-us">支援，比如每天 8:00</td>
+            <td>不支援</td>
+            <td>不支援</td>
+          </tr>
+          <tr>
+            <td>誰發的、有沒有送達</td>
+            <td class="lp-cmp-us">每則都留痕可回看</td>
+            <td>只見聊天記錄</td>
+            <td>沒有記錄</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="lp-cmp-note">
+      一句話總結：老師少跑一趟，學生不用帶手機，通知還能被聽見、被看見、被記住。
+    </p>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="lp-sec" id="faq">
+  <div class="lp-wrap">
+    <div class="lp-sec-head">
+      <h2>常見問題</h2>
+    </div>
+    <div class="lp-faq">
+      <details open>
+        <summary>教室電腦需要一直開著嗎？</summary>
+        <p>需要。教室端頁面保持打開即可（可以放在一體機或一台舊電腦上常駐），這樣通知才能即時全螢幕彈出。</p>
+      </details>
+      <details>
+        <summary>為什麼彈出視窗沒有聲音？</summary>
+        <p>瀏覽器要求使用者先有一次點擊才允許播放聲音。綁定完成後在教室端頁面上點一下，之後就能正常語音播報了。</p>
+      </details>
+      <details>
+        <summary>手機上能發通知嗎？</summary>
+        <p>可以。老師端就是網頁，手機瀏覽器打開登入後一樣能發通知、看歷史記錄。</p>
+      </details>
+      <details>
+        <summary>一個班可以有幾個老師發通知？</summary>
+        <p>不限。班主任產生邀請碼，其他老師用協同授權碼註冊或加入後，都能向這個班發通知。</p>
+      </details>
+      <details>
+        <summary>卡號丟了、密碼忘了怎麼辦？</summary>
+        <p>寄信到 <b class="mono">ladyiney25@gmail.com</b> 說明帳號狀況，我們幫你處理。</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- 卡號說明 -->
+<section class="lp-sec lp-sec-alt" id="price">
+  <div class="lp-wrap">
+    <div class="lp-sec-head">
+      <h2>卡號說明與申請</h2>
+      <p>系統依班級授權，一張卡對應一個帳號，註冊即生效。</p>
+    </div>
+    <div class="lp-price">
+      <div class="lp-plan lp-plan-main">
+        <div class="lp-plan-tag">推薦</div>
+        <h3>普通啟用卡</h3>
+        <p class="lp-plan-for">適合班主任、年級組長</p>
+        <ul>
+          <li>註冊後自帶 <b>2 個班級</b></li>
+          <li>全螢幕彈出視窗 + 語音播報</li>
+          <li>定時 / 每日自動播報</li>
+          <li>產生邀請碼，拉任課老師協同</li>
+          <li>通知歷史留痕</li>
+        </ul>
+        <a class="btn btn-pri btn-block" href="#card">申請普通啟用卡</a>
+      </div>
+      <div class="lp-plan">
+        <div class="lp-plan-tag lp-plan-tag-gray">協同</div>
+        <h3>協同授權碼</h3>
+        <p class="lp-plan-for">適合任課老師、副班主任</p>
+        <ul>
+          <li>用 <b>CO-</b> 開頭的授權碼註冊</li>
+          <li>可加入他人班級並發通知</li>
+          <li>不需要自己新建班級</li>
+          <li>與班主任共用同一塊教室大螢幕</li>
+        </ul>
+        <a class="btn btn-block" href="#card">申請協同授權碼</a>
+      </div>
+    </div>
+    <p class="lp-price-note">
+      需要更多班級、多校區或客製功能？同樣寄信到 <b class="mono">ladyiney25@gmail.com</b> 說明狀況即可。
+    </p>
+  </div>
+</section>
+
+<!-- 申請卡號（轉換） -->
+<section class="lp-sec" id="card">
+  <div class="lp-wrap lp-apply">
+    <div class="lp-apply-txt">
+      <h2>免費申請啟用卡號</h2>
+      <p>
+        填寫聯絡電子信箱提交申請，我們會把卡號寄給你；也可以直接把申請寄到信箱
+        <b class="mono">ladyiney25@gmail.com</b>。
+      </p>
+      <ul class="lp-apply-tips">
+        <li>申請時寫清：<b>你的聯絡電子信箱</b></li>
+        <li>說明是<b>班主任 card</b> 還是<b>協同授權碼</b>，我們好準備</li>
+        <li>一般 <b>1 個工作日內</b>回覆</li>
+      </ul>
+      <div class="lp-apply-mail">
+        <span>📧 申請信箱</span>
+        <b class="mono" id="lpMail">ladyiney25@gmail.com</b>
+        <button class="btn btn-sm" onclick="lpCopyMail()">複製</button>
+      </div>
+    </div>
+
+    <div class="card lp-apply-form">
+      <h3>線上提交申請</h3>
+      <label class="lbl">聯絡電子信箱 *</label>
+      <input class="inp" id="lpContact" type="email" placeholder="例如：teacher@example.com">
+      <label class="lbl">補充說明（選填）</label>
+      <textarea class="inp" id="lpNote" rows="3" maxlength="200" placeholder="例如：想申請 2 個班的卡；需要每日 8:00 自動播報"></textarea>
+      <div style="height:14px"></div>
+      <button class="btn btn-pri btn-block" id="lpBtn" onclick="lpSubmit()">提交申請</button>
+      <button class="btn btn-block" style="margin-top:8px" onclick="lpMailto()">📧 改用信箱寄送申請</button>
+      <p class="muted" style="font-size:12px;margin:10px 0 0;line-height:1.6" id="lpTip">
+        已有卡號？直接去<a href="/zh-Hant/login#reg">註冊帳號</a>。
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- 底部轉換 -->
+<section class="lp-final">
+  <div class="lp-wrap">
+    <h2>給教室裝一個「會說話的喇叭」</h2>
+    <p>申請一張啟用卡號，今天就能用起來。</p>
+    <div class="lp-cta lp-cta-center">
+      <a class="btn btn-pri lp-btn-lg" href="#card">免費申請啟用卡號</a>
+      <a class="btn lp-btn-lg" href="/zh-Hant/login">登入後台</a>
+    </div>
+    <p class="lp-final-mail">
+      申請 / 諮詢：<b class="mono">ladyiney25@gmail.com</b>
+    </p>
+  </div>
+</section>
+
+<footer class="lp-foot">
+  <div class="lp-wrap lp-foot-in">
+    <span>© 班級喊話系統</span>
+    <span class="lp-foot-links">
+      <a href="/zh-Hant/login">登入</a>
+      <a href="/zh-Hant/room">教室端</a>
+      <a href="/en/">English</a>
+    </span>
+  </div>
+</footer>
+
+<script src="/zh-Hant/common.js"></script>
+<script>
+const LP_EMAIL = 'ladyiney25@gmail.com';
+
+function lpPayload() {
+  return {
+    contact: (document.getElementById('lpContact').value || '').trim(),
+    note: (document.getElementById('lpNote').value || '').trim(),
+    lang: 'zh-Hant',
+  };
+}
+
+async function lpSubmit() {
+  const p = lpPayload();
+  if (p.contact.length < 3) return toast('請先填寫聯絡電子信箱', 'err');
+  const btn = document.getElementById('lpBtn');
+  btn.disabled = true;
+  try {
+    await api('POST', '/api/card-request', p);
+    toast('申請已提交，我們會在 1 個工作日內與你聯絡', 'ok');
+    document.getElementById('lpTip').innerHTML =
+      '申請已收到 ✅ 我們會在 1 個工作日內與你聯絡；也可以直接寄信到 <b class="mono">' + LP_EMAIL + '</b>。已有卡號？去<a href="/zh-Hant/login#reg">註冊帳號</a>。';
+  } catch (err) {
+    toast(err.message, 'err');
+  } finally { btn.disabled = false; }
+}
+
+function lpMailto() {
+  const p = lpPayload();
+  const subject = '申請啟用卡號（班級喊話系統）';
+  const body = [
+    '你好，我想申請班級喊話系統的啟用卡號。',
+    '',
+    '聯絡電子信箱：' + (p.contact || '（請填寫）'),
+    '補充說明：' + (p.note || '（無）'),
+  ].join('\n');
+  location.href = 'mailto:' + LP_EMAIL + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+}
+
+async function lpCopyMail() {
+  const ok = await copyText(LP_EMAIL);
+  toast(ok ? '電子信箱已複製：' + LP_EMAIL : '請手動複製：' + LP_EMAIL, ok ? 'ok' : 'err');
+}
+</script>
+</body>
+</html>

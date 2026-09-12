@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Class Broadcast System · Console</title>
+<title>班級喊話系統 · 後台</title>
 <link rel="stylesheet" href="/style.css">
 <style>
   details.fold{border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}
@@ -20,7 +20,7 @@
 <header class="topbar">
   <div class="mini-logo">
     <div class="logo">📢</div>
-    <span>Class Broadcast System</span>
+    <span>班級喊話系統</span>
   </div>
   <div class="row" style="gap:10px">
     <span class="badge badge-pri" id="uType"></span>
@@ -28,11 +28,12 @@
     <span style="font-weight:600" id="uName"></span>
     <span class="language-list">
       <a href="/app" title="简体中文">简体</a>
-      <a href="/zh-Hant/app" title="繁體中文">繁體</a>
-      <a class="curr" href="/en/app" title="English">English</a>
+      <a class="curr" href="/zh-Hant/app" title="繁體中文">繁體</a>
+      <a href="/en/app" title="English">English</a>
     </span>
-    <button class="btn btn-sm btn-danger" onclick="doLogout()">Sign out</button>
+    <button class="btn btn-sm btn-danger" onclick="doLogout()">登出</button>
   </div>
+
 </header>
 
 <div id="inviteBox" style="max-width:1240px;margin:14px auto 0;padding:0 18px"></div>
@@ -41,7 +42,7 @@
 <main class="layout">
   <aside class="side">
     <div class="spread">
-      <div class="muted" style="font-weight:600">My classes</div>
+      <div class="muted" style="font-weight:600">我的班級</div>
       <div class="row">
         <span class="badge" id="sideCount">0</span>
       </div>
@@ -55,7 +56,7 @@
   <section class="content" id="content">
     <div class="card empty-state" id="emptyBox" style="display:none">
       <div class="big">🗂️</div>
-      <h3 id="emptyTitle">No classes yet</h3>
+      <h3 id="emptyTitle">暫無班級</h3>
       <p id="emptyDesc"></p>
     </div>
     <div id="contentBody" style="display:flex;flex-direction:column;gap:16px"></div>
@@ -63,15 +64,15 @@
 </main>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/en/common.js"></script>
+<script src="/zh-Hant/common.js"></script>
 <script>
 const COLORS = ['#e11d48', '#2563eb', '#16a34a', '#f59e0b', '#9333ea'];
-let ME = null;          // data returned by /api/me
-let curId = null;       // currently selected class id
-let cur = null;         // copy of the current class object
+let ME = null;          // /api/me 回傳的資料
+let curId = null;       // 目前選取的班級 id
+let cur = null;         // 目前班級物件副本
 let msgColor = COLORS[0];
 
-/* ================= basic rendering ================= */
+/* ================= 基礎渲染 ================= */
 function boot() {
   renderTop();
   renderSide();
@@ -86,10 +87,10 @@ function boot() {
 function renderTop() {
   const u = ME.user;
   document.getElementById('uName').textContent = u.username;
-  document.getElementById('uType').textContent = u.type === 'co' ? 'Co-teacher' : 'Owner';
+  document.getElementById('uType').textContent = u.type === 'co' ? '協同帳號' : '主帳號';
   document.getElementById('uType').className = 'badge ' + (u.type === 'co' ? 'badge-warn' : 'badge-pri');
   document.getElementById('uQuota').textContent = u.type === 'owner'
-    ? ((u.ownedCount || 0) + ' / ' + (u.classLimit || 0) + ' classes created') : '';
+    ? ('已建立 ' + (u.ownedCount || 0) + ' / ' + (u.classLimit || 0) + ' 個班級') : '';
 }
 
 function renderSide() {
@@ -101,12 +102,12 @@ function renderSide() {
       <span class="dot ${c.online ? 'on' : 'off'}"></span>
       <div class="grow" style="min-width:0">
         <div class="cname">${esc(c.name)}</div>
-        <div class="tag">${c.isOwner ? 'Created by me' : 'Co-teacher · ' + esc(c.ownerName || '')}</div>
+        <div class="tag">${c.isOwner ? '我建立' : '協同·' + esc(c.ownerName || '')}</div>
       </div>
-      ${!c.isOwner ? '' : (c.pendingInvites ? `<span class="badge badge-warn">${c.pendingInvites} invited</span>` : '')}
+      ${!c.isOwner ? '' : (c.pendingInvites ? `<span class="badge badge-warn">邀${c.pendingInvites}</span>` : '')}
     </div>`;
-  let html = owned.map(item).join('') + (owned.length && shared.length ? '<div class="muted" style="padding:6px 4px;font-size:12px">Joined classes</div>' : '') + shared.map(item).join('');
-  if (!ME.classes.length) html = '<div class="muted" style="padding:10px;font-size:13px;text-align:center">No classes yet</div>';
+  let html = owned.map(item).join('') + (owned.length && shared.length ? '<div class="muted" style="padding:6px 4px;font-size:12px">加入的班級</div>' : '') + shared.map(item).join('');
+  if (!ME.classes.length) html = '<div class="muted" style="padding:10px;font-size:13px;text-align:center">還沒有班級</div>';
   box.innerHTML = html;
   document.getElementById('sideCount').textContent = ME.classes.length;
 
@@ -114,46 +115,46 @@ function renderSide() {
   if (ME.user.type === 'owner') {
     wrap.innerHTML = `
       <div style="display:flex;gap:8px">
-        <input class="inp grow" id="newName" maxlength="20" placeholder="New class name, e.g. Grade 3 Class 2">
-        <button class="btn btn-pri" onclick="doCreate()">Create</button>
+        <input class="inp grow" id="newName" maxlength="20" placeholder="輸入新班級名稱，如 三年二班">
+        <button class="btn btn-pri" onclick="doCreate()">建立</button>
       </div>`;
   } else wrap.innerHTML = '';
 }
 
 function renderQuotaTip() {
   const t = document.getElementById('quotaTip');
-  if (ME.user.type === 'co') t.textContent = 'As a co-teacher, enter the invite code from the class owner to join a class and send notices.';
-  else t.innerHTML = 'Each owner account includes 2 classes. Contact support for more.';
+  if (ME.user.type === 'co') t.textContent = '協同帳號輸入班主任給的邀請碼即可加入班級，隨後可發通知。';
+  else t.innerHTML = '一個主帳號自帶 2 個班級；需要更多請聯絡客服。';
 }
 
 function showEmpty() {
   const eb = document.getElementById('emptyBox');
   eb.style.display = 'block';
   const isCo = ME.user.type === 'co';
-  document.getElementById('emptyTitle').textContent = isCo ? 'No classes joined yet' : 'No classes yet';
+  document.getElementById('emptyTitle').textContent = isCo ? '暫無加入的班級' : '還沒有班級';
   document.getElementById('emptyDesc').textContent = isCo
-    ? 'Enter the invite code from the class owner under “Join class” above to join and start sending notices.'
-    : 'Type a class name above and click “Create” to get its bind code.';
+    ? '在上方「加入班級」處輸入班主任給你的邀請碼，即可加入並發送通知。'
+    : '在上方輸入班級名稱點「建立」，即可取得該班級的綁定碼。';
   const body = document.getElementById('contentBody');
   if (body) body.innerHTML = '';
 }
 
-/* ================= invitation banners ================= */
+/* ================= 邀請橫幅 ================= */
 function renderInvites() {
   const box = document.getElementById('inviteBox');
   if (!ME.invites.length) { box.innerHTML = ''; return; }
   box.innerHTML = ME.invites.map((iv) => `
     <div class="card" style="padding:12px 16px;margin-bottom:10px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-      <span class="badge badge-warn" style="font-size:13px">📨 Invitation</span>
+      <span class="badge badge-warn" style="font-size:13px">📨 收到邀請</span>
       <div class="grow">
-        <b>${esc(iv.ownerName)}</b> invited you to join class <b>${esc(iv.className)}</b>. Accept to start sending notices.
+        <b>${esc(iv.ownerName)}</b> 邀請你加入班級 <b>${esc(iv.className)}</b>，接受後即可發送通知
       </div>
-      <button class="btn btn-pri btn-sm" onclick="handleInvite('${iv.id}','accept')">Accept</button>
-      <button class="btn btn-sm" onclick="handleInvite('${iv.id}','reject')">Decline</button>
+      <button class="btn btn-pri btn-sm" onclick="handleInvite('${iv.id}','accept')">接受</button>
+      <button class="btn btn-sm" onclick="handleInvite('${iv.id}','reject')">拒絕</button>
     </div>`).join('');
 }
 
-/* ================= class content ================= */
+/* ================= 班級內容 ================= */
 async function selectClass(id) {
   curId = id;
   cur = ME.classes.find((c) => c.id === id);
@@ -176,21 +177,21 @@ function renderContent() {
     <div class="spread" style="flex-wrap:wrap;gap:10px">
       <div class="row" style="gap:12px;min-width:0">
         <h2 style="margin:0;font-size:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="clsName">${esc(c.name)}</h2>
-        ${c.isOwner ? '<span class="badge badge-pri">My class</span>' : '<span class="badge badge-warn">Shared with me</span>'}
+        ${c.isOwner ? '<span class="badge badge-pri">我的班級</span>' : '<span class="badge badge-warn">協同管理</span>'}
         <span class="dotbox" data-cid="${c.id}" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)">
-          <span class="dot ${c.online ? 'on' : 'off'}"></span><span class="st">${c.online ? 'Classroom online' : 'Classroom offline'}</span>
+          <span class="dot ${c.online ? 'on' : 'off'}"></span><span class="st">${c.online ? '教室線上' : '教室離線'}</span>
         </span>
       </div>
       <div class="row" style="flex-wrap:wrap;gap:8px;align-items:center">
         ${isOwner ? `
-        <span class="muted" style="font-size:13px">Bind code</span>
+        <span class="muted" style="font-size:13px">綁定碼</span>
         <code id="bindCode" class="mono" style="font-size:15px;background:#f3f4fb;padding:4px 10px;border-radius:6px;color:#1e2434">${esc(c.bindCode || '')}</code>
-        <button class="btn btn-sm" onclick="copyBind()">Copy</button>` : ''}
-        <button class="btn btn-sm" onclick="remoteMinimize()">📥 Minimize notice screen</button>
+        <button class="btn btn-sm" onclick="copyBind()">複製</button>` : ''}
+        <button class="btn btn-sm" onclick="remoteMinimize()">📥 最小化通知螢幕</button>
         ${isOwner ? `
-          <button class="btn btn-sm" onclick="toggleRename()" id="btnRename">✎ Rename</button>
-          <button class="btn btn-sm btn-danger" onclick="doDeleteClass()">Delete class</button>` : `
-          <button class="btn btn-sm btn-danger" onclick="doLeave()">Leave class</button>`}
+          <button class="btn btn-sm" onclick="toggleRename()" id="btnRename">✎ 重新命名</button>
+          <button class="btn btn-sm btn-danger" onclick="doDeleteClass()">刪除班級</button>` : `
+          <button class="btn btn-sm btn-danger" onclick="doLeave()">退出該班級</button>`}
       </div>
     </div>
     <div id="renameBox" class="hide" style="margin-top:10px;display:flex;gap:8px"></div>
@@ -198,101 +199,101 @@ function renderContent() {
 
   ${isOwner ? '' : `
   <div class="card" style="padding:14px 18px;font-size:13px;color:var(--muted)">
-    You are <b style="color:#374151">${esc(u.username)}</b> (co-teacher), invited to this class by <b style="color:#374151">${esc(c.ownerName || '')}</b>. You can send notices directly.
+    你是 <b style="color:#374151">${esc(u.username)}</b>（協同老師），由 <b style="color:#374151">${esc(c.ownerName || '')}</b> 邀請加入本班，可直接發送通知。
   </div>`}
 
   <div class="card" style="padding:16px 18px;order:-1">
-    <div style="font-weight:700;font-size:15px;margin-bottom:10px">Send a notice</div>
-    <textarea class="inp" id="txtContent" rows="3" maxlength="500" placeholder="Message to broadcast, e.g. All Grade 3 Class 2 students, please gather at the playground."></textarea>
+    <div style="font-weight:700;font-size:15px;margin-bottom:10px">發送通知</div>
+    <textarea class="inp" id="txtContent" rows="3" maxlength="500" placeholder="輸入要播報的內容，如：請三年二班全體同學馬上到操場集合。"></textarea>
 
     <details class="fold" style="margin-top:10px" open>
       <summary>
-        <span class="fold-t">⚙️ On-screen duration / Scheduling</span>
-        <span class="fold-open">Expand ▾</span>
+        <span class="fold-t">⚙️ 停留時長 / 定時喊話</span>
+        <span class="fold-open">展開 ▾</span>
       </summary>
       <div class="fold-body">
         <div class="row" style="gap:14px;flex-wrap:wrap;align-items:center;padding:8px 0">
           <label class="row" style="gap:6px;align-items:center">
-            <span class="muted" style="font-size:13px">Pop-up duration</span>
+            <span class="muted" style="font-size:13px">教室彈出視窗停留</span>
             <select class="sel" id="selDuration" style="width:auto" onchange="onDurChange()">
-              <option value="min">Minutes</option>
-              <option value="hour">Hours</option>
-              <option value="-1" selected>Always show until closed</option>
+              <option value="min">依分鐘</option>
+              <option value="hour">依小時</option>
+              <option value="-1" selected>一直顯示，需手動關閉</option>
             </select>
             <span id="durInputWrap" class="row hide" style="gap:6px;align-items:center">
               <input class="inp" id="inpDurNum" type="number" min="1" value="5" style="width:70px;padding:8px 10px">
-              <span id="durUnit" class="muted" style="font-size:13px">min</span>
+              <span id="durUnit" class="muted" style="font-size:13px">分鐘</span>
             </span>
           </label>
           <label class="row" style="gap:6px">
-            <span class="muted" style="font-size:13px">Send mode</span>
+            <span class="muted" style="font-size:13px">發送方式</span>
             <select class="sel" id="selMode" style="width:auto" onchange="onModeChange()">
-              <option value="now">Send now</option>
-              <option value="once">Schedule (date &amp; time)</option>
-              <option value="daily">Daily at a fixed time</option>
+              <option value="now">立即發送</option>
+              <option value="once">定時發送(指定日期時間)</option>
+              <option value="daily">每天固定時間</option>
             </select>
           </label>
         </div>
-        <div class="muted" id="durTip" style="font-size:12px;padding:0 0 6px;display:none">With “Always show”, the notice stays on the classroom screen until someone taps 【Minimize】 in the classroom, or you use “📥 Minimize notice screen” above.</div>
+        <div class="muted" id="durTip" style="font-size:12px;padding:0 0 6px;display:none">選「一直顯示」時，教室螢幕會一直顯示這則通知，直到有人在教室點【最小化待命】，或你點上方「📥 最小化通知螢幕」遠端關掉。</div>
         <div id="cfgOnce" class="hide row" style="gap:8px;align-items:center">
-          <span class="muted" style="font-size:13px">Send at</span>
+          <span class="muted" style="font-size:13px">發送時刻</span>
           <input class="inp" type="datetime-local" id="inpOnceAt" style="width:auto;padding:8px 10px">
-          <span class="muted" style="font-size:12px">Broadcasts once at that time</span>
+          <span class="muted" style="font-size:12px">到時自動播報一次</span>
         </div>
         <div id="cfgDaily" class="hide row" style="gap:8px;align-items:center">
-          <span class="muted" style="font-size:13px">Time of day</span>
+          <span class="muted" style="font-size:13px">每天時刻</span>
           <input class="inp" type="time" id="inpDailyAt" style="width:auto;padding:8px 10px">
-          <span class="muted" style="font-size:12px">Broadcasts every day at this time (repeatable)</span>
+          <span class="muted" style="font-size:12px">每天這個時間自動播報(可重複)</span>
         </div>
       </div>
     </details>
 
     <div class="row" style="margin-top:10px;flex-wrap:wrap;gap:12px">
       <label class="row" style="gap:6px;cursor:pointer">
-        <input type="checkbox" id="chkVoice" checked style="width:16px;height:16px"> Voice
+        <input type="checkbox" id="chkVoice" checked style="width:16px;height:16px"> 語音播報
       </label>
       <div class="row" style="gap:6px">
-        <span class="muted" style="font-size:13px">Pop-up color</span>
+        <span class="muted" style="font-size:13px">彈出視窗顏色</span>
         <span class="swatches" id="swatches"></span>
       </div>
-      <button class="btn btn-sm" onclick="sendTest()">🔊 Test</button>
-      <button class="btn btn-pri btn-sm" id="btnSend" style="margin-left:auto;padding:10px 22px;font-size:15px" onclick="sendByMode()">Send to classroom 📢</button>
+      <button class="btn btn-sm" onclick="sendTest()">🔊 測試</button>
+      <button class="btn btn-pri btn-sm" id="btnSend" style="margin-left:auto;padding:10px 22px;font-size:15px" onclick="sendByMode()">發送到教室 📢</button>
     </div>
   </div>
 
   <div class="card">
     <div class="spread" style="padding:14px 18px;border-bottom:1px solid var(--line)">
-      <div style="font-weight:700;font-size:15px">⏰ Scheduled broadcasts</div>
-      <button class="btn btn-sm" onclick="refreshJobs()">Refresh</button>
+      <div style="font-weight:700;font-size:15px">⏰ 定時喊話</div>
+      <button class="btn btn-sm" onclick="refreshJobs()">重新整理</button>
     </div>
-    <div id="jobList"><div class="empty-state" style="padding:22px">Loading…</div></div>
+    <div id="jobList"><div class="empty-state" style="padding:22px">載入中…</div></div>
   </div>
 
   <div class="card">
     <div class="spread" style="padding:14px 18px;border-bottom:1px solid var(--line)">
-      <div style="font-weight:700;font-size:15px">Notice history <span class="muted" style="font-size:12px;font-weight:400">Only the latest 10 are kept</span></div>
-      <button class="btn btn-sm" onclick="refreshNotifs()">Refresh</button>
+      <div style="font-weight:700;font-size:15px">通知記錄 <span class="muted" style="font-size:12px;font-weight:400">僅保留最近 10 筆記錄</span></div>
+      <button class="btn btn-sm" onclick="refreshNotifs()">重新整理</button>
     </div>
-    <div id="notifList"><div class="empty-state" style="padding:30px">Loading…</div></div>
+    <div id="notifList"><div class="empty-state" style="padding:30px">載入中…</div></div>
   </div>
 
   ${isOwner ? `
   <details class="fold">
     <summary>
-      <span class="fold-t">👥 Co-teachers</span>
-      <span class="fold-open">Expand ▾</span>
+      <span class="fold-t">👥 協同老師</span>
+      <span class="fold-open">展開 ▾</span>
     </summary>
     <div class="fold-body">
-      <p class="muted" style="margin:2px 0 10px;font-size:13px">The other teacher first registers a co-teacher account with a <b style="color:#374151">CO- code</b>. Then send them the invite code below — they enter it under “Join class” after signing in.</p>
+      <p class="muted" style="margin:2px 0 10px;font-size:13px">對方先用 <b style="color:#374151">CO- 開頭協同授權碼</b> 註冊協同帳號；把下方邀請碼發給對方，登入後在「加入班級」處輸入即可加入本班。</p>
       <div class="row" id="codeGenRow" style="gap:8px;margin-bottom:6px">
-        <button class="btn btn-pri btn-sm" onclick="makeInviteCode()">🔑 Generate invite code</button>
+        <button class="btn btn-pri btn-sm" onclick="makeInviteCode()">🔑 產生邀請碼</button>
       </div>
       <div id="codeRow" style="display:none;margin-bottom:6px">
         <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
           <span id="invCode" class="mono" style="font-size:22px;font-weight:800;letter-spacing:6px;padding:8px 16px;background:#f3f4f6;border:1px dashed var(--line);border-radius:10px"></span>
-          <button class="btn btn-sm" onclick="copyInviteCode()">Copy</button>
-          <button class="btn btn-sm btn-danger" onclick="revokeInviteCode()">Revoke</button>
-          <button class="btn btn-sm" onclick="makeInviteCode()">Regenerate</button>
+          <button class="btn btn-sm" onclick="copyInviteCode()">複製</button>
+          <button class="btn btn-sm btn-danger" onclick="revokeInviteCode()">作廢</button>
+          <button class="btn btn-sm" onclick="makeInviteCode()">重新產生</button>
         </div>
       </div>
       <p class="muted" style="font-size:12px;margin:0 0 10px" id="codeHint"></p>
@@ -301,7 +302,7 @@ function renderContent() {
   </details>` : ''}
   `;
 
-  // color swatches
+  // 色板
   const sw = document.getElementById('swatches');
   sw.innerHTML = COLORS.map((cl) => `<span class="sw ${cl === msgColor ? 'on' : ''}" style="background:${cl}" data-c="${cl}" onclick="pickColor(this,'${cl}')"></span>`).join('');
   if (isOwner && document.getElementById('coList')) loadCoManage();
@@ -314,7 +315,7 @@ async function refreshNotifs() {
     const list = document.getElementById('notifList');
     if (!list) return;
     if (!notifications.length) {
-      list.innerHTML = '<div class="empty-state" style="padding:30px"><div>No notices sent yet</div><div class="muted" style="font-size:13px">Type a message above and click “Send to classroom”.</div></div>';
+      list.innerHTML = '<div class="empty-state" style="padding:30px"><div>還沒有發送過通知</div><div class="muted" style="font-size:13px">在上方輸入內容點「發送到教室」試試</div></div>';
       return;
     }
     list.innerHTML = notifications.map((n) => `
@@ -324,10 +325,10 @@ async function refreshNotifs() {
           <div class="row" style="gap:8px;flex-wrap:wrap">
             <b>${esc(n.fromName)}</b>
             <span class="muted" style="font-size:12px">${fmtTime(n.createdAt)}</span>
-            ${n.voice === false ? '<span class="badge">Muted</span>' : '<span class="badge badge-pri">🔊 Voice</span>'}
-            ${n.schedule === 'daily' ? '<span class="badge badge-warn">Daily</span>' : (n.schedule === 'once' ? '<span class="badge badge-pri">Scheduled</span>' : '')}
-            ${n.duration === -1 ? '<span class="badge badge-warn">Manual close</span>' : (n.duration ? '<span class="badge">Stay ' + fmtDuration(n.duration) + '</span>' : '')}
-            ${n.delivered ? '<span class="badge badge-ok">Delivered</span>' : '<span class="badge badge-red">Classroom was offline</span>'}
+            ${n.voice === false ? '<span class="badge">靜音</span>' : '<span class="badge badge-pri">🔊 播報</span>'}
+            ${n.schedule === 'daily' ? '<span class="badge badge-warn">每日定時</span>' : (n.schedule === 'once' ? '<span class="badge badge-pri">定時</span>' : '')}
+            ${n.duration === -1 ? '<span class="badge badge-warn">需手動關閉</span>' : (n.duration ? '<span class="badge">停留' + fmtDuration(n.duration) + '</span>' : '')}
+            ${n.delivered ? '<span class="badge badge-ok">已送達教室</span>' : '<span class="badge badge-red">發送時教室離線</span>'}
           </div>
           <div style="margin-top:4px;word-break:break-word">${esc(n.content)}</div>
         </div>
@@ -335,13 +336,13 @@ async function refreshNotifs() {
   } catch (e) { toast(e.message, 'err'); }
 }
 
-/* ================= actions ================= */
+/* ================= 操作 ================= */
 async function doCreate() {
   const name = document.getElementById('newName').value.trim();
-  if (!name) return toast('Please enter a class name', 'err');
+  if (!name) return toast('請輸入班級名稱', 'err');
   try {
     const { user } = await api('POST', '/api/classes', { name });
-    toast('Class created', 'ok');
+    toast('班級建立成功', 'ok');
     ME = await api('GET', '/api/me');
     curId = ME.classes[ME.classes.length - 1].id;
     boot();
@@ -349,10 +350,10 @@ async function doCreate() {
 }
 
 async function doDeleteClass() {
-  if (!confirm('Delete class “' + cur.name + '”? Its notice history and co-teacher links will be removed too.')) return;
+  if (!confirm('確認刪除班級「' + cur.name + '」？將同時清空其通知記錄與協同關係。')) return;
   try {
     await api('DELETE', `/api/classes/${curId}`);
-    toast('Class deleted', 'ok');
+    toast('班級已刪除', 'ok');
     ME = await api('GET', '/api/me');
     curId = null; boot();
   } catch (e) { toast(e.message, 'err'); }
@@ -364,18 +365,18 @@ function toggleRename() {
   box.classList.toggle('hide');
   if (!hidden) return;
   box.innerHTML = `<input class="inp grow" id="newNameX" value="${esc(cur.name)}" maxlength="20">
-    <button class="btn btn-pri btn-sm" onclick="doRename()">Save</button>
-    <button class="btn btn-sm" onclick="toggleRename()">Cancel</button>`;
+    <button class="btn btn-pri btn-sm" onclick="doRename()">儲存</button>
+    <button class="btn btn-sm" onclick="toggleRename()">取消</button>`;
   document.getElementById('newNameX').focus();
   document.getElementById('newNameX').select();
 }
 
 async function doRename() {
   const name = document.getElementById('newNameX').value.trim();
-  if (!name) return toast('Name cannot be empty', 'err');
+  if (!name) return toast('名稱不能為空', 'err');
   try {
     await api('PATCH', `/api/classes/${curId}`, { name });
-    toast('Renamed', 'ok');
+    toast('已重新命名', 'ok');
     ME = await api('GET', '/api/me');
     cur = ME.classes.find((c) => c.id === curId);
     renderSide(); renderContent();
@@ -383,10 +384,10 @@ async function doRename() {
 }
 
 async function doLeave() {
-  if (!confirm('Leave class “' + cur.name + '”?')) return;
+  if (!confirm('退出班級「' + cur.name + '」？')) return;
   try {
     await api('DELETE', `/api/classes/${curId}/members/${ME.user.id}`);
-    toast('You left the class', 'ok');
+    toast('已退出該班級', 'ok');
     ME = await api('GET', '/api/me');
     curId = null; boot();
   } catch (e) { toast(e.message, 'err'); }
@@ -394,7 +395,7 @@ async function doLeave() {
 
 async function copyBind() {
   const code = document.getElementById('bindCode').textContent.trim();
-  toast((await copyText(code)) ? 'Bind code copied' : 'Please copy manually: ' + code, 'ok');
+  toast((await copyText(code)) ? '綁定碼已複製' : '請手動複製: ' + code, 'ok');
 }
 function pickColor(el, c) {
   msgColor = c;
@@ -402,17 +403,17 @@ function pickColor(el, c) {
 }
 
 function fmtDuration(s) {
-  if (s === -1) return 'manual close';
+  if (s === -1) return '手動關閉';
   if (!s) return '';
-  if (s < 60) return s + 's';
+  if (s < 60) return s + '秒';
   if (s < 3600) {
     const m = Math.floor(s / 60);
     const r = s % 60;
-    return r === 0 ? m + ' min' : m + ' min ' + r + ' s';
+    return r === 0 ? m + '分鐘' : m + '分' + r + '秒';
   }
   const h = Math.floor(s / 3600);
   const m = Math.round((s % 3600) / 60);
-  return m === 0 ? h + ' hr' : h + ' hr ' + m + ' min';
+  return m === 0 ? h + '小時' : h + '小時' + m + '分';
 }
 function durVal() {
   const sel = document.getElementById('selDuration');
@@ -422,9 +423,9 @@ function durVal() {
   const inp = document.getElementById('inpDurNum');
   if (!inp) return 0;
   let n = Math.floor(Number(inp.value));
-  if (!Number.isFinite(n) || n < 1) { n = 1; inp.value = 1; } // empty or 0 → treat as 1 unit
+  if (!Number.isFinite(n) || n < 1) { n = 1; inp.value = 1; } // 未填或填 0 時依 1 個單位
   const sec = mode === 'hour' ? n * 3600 : n * 60;
-  return Math.min(sec, 14400); // up to 4 hours
+  return Math.min(sec, 14400); // 最長 4 小時
 }
 function onDurChange() {
   const sel = document.getElementById('selDuration');
@@ -434,7 +435,7 @@ function onDurChange() {
   const unit = document.getElementById('durUnit');
   const tip = document.getElementById('durTip');
   if (wrap) wrap.classList.toggle('hide', mode === '-1');
-  if (unit) unit.textContent = mode === 'hour' ? 'hr' : 'min';
+  if (unit) unit.textContent = mode === 'hour' ? '小時' : '分鐘';
   if (tip) tip.style.display = mode === '-1' ? '' : 'none';
 }
 function onModeChange() {
@@ -442,7 +443,7 @@ function onModeChange() {
   document.getElementById('cfgOnce').classList.toggle('hide', v !== 'once');
   document.getElementById('cfgDaily').classList.toggle('hide', v !== 'daily');
   const b = document.getElementById('btnSend');
-  b.textContent = v === 'now' ? 'Send to classroom 📢' : (v === 'daily' ? 'Start daily broadcast ⏰' : 'Schedule broadcast ⏰');
+  b.textContent = v === 'now' ? '發送到教室 📢' : (v === 'daily' ? '開啟每日喊話 ⏰' : '安排定時喊話 ⏰');
 }
 function sendByMode() {
   return document.getElementById('selMode').value === 'now' ? doSend() : doSchedule();
@@ -450,13 +451,13 @@ function sendByMode() {
 
 async function doSend() {
   const content = document.getElementById('txtContent').value.trim();
-  if (!content) return toast('Please enter the notice content', 'err');
+  if (!content) return toast('請輸入通知內容', 'err');
   try {
     const res = await api('POST', `/api/classes/${curId}/notify`, {
       content, voice: document.getElementById('chkVoice').checked, color: msgColor, duration: durVal(),
     });
     const n = res.notification;
-    toast(n.delivered ? 'Sent — the classroom is broadcasting' : 'Sent, but the classroom is offline (it may not be broadcast)', n.delivered ? 'ok' : 'err');
+    toast(n.delivered ? '已發送，教室端正在播報' : '已發送，但教室端目前離線（可能無法播報）', n.delivered ? 'ok' : 'err');
     document.getElementById('txtContent').value = '';
     refreshNotifs();
   } catch (e) { toast(e.message, 'err'); }
@@ -464,21 +465,21 @@ async function doSend() {
 
 async function doSchedule() {
   const content = document.getElementById('txtContent').value.trim();
-  if (!content) return toast('Please enter the broadcast content', 'err');
+  if (!content) return toast('請輸入喊話內容', 'err');
   const v = document.getElementById('selMode').value;
   const common = { content, voice: document.getElementById('chkVoice').checked, color: msgColor, duration: durVal() };
   try {
     let msg;
     if (v === 'once') {
       const at = document.getElementById('inpOnceAt').value;
-      if (!at) return toast('Please choose the date and time first', 'err');
+      if (!at) return toast('請先選擇發送的日期時間', 'err');
       const res = await api('POST', `/api/classes/${curId}/jobs`, { ...common, type: 'once', runAt: new Date(at).toISOString() });
-      msg = 'Scheduled — broadcasts at ' + fmtTime(res.job.runAt);
+      msg = '已安排定時喊話, 將於 ' + fmtTime(res.job.runAt) + ' 自動播報';
     } else {
       const tm = document.getElementById('inpDailyAt').value;
-      if (!tm) return toast('Please choose the daily time first', 'err');
+      if (!tm) return toast('請先選擇每天播報的時間', 'err');
       const res = await api('POST', `/api/classes/${curId}/jobs`, { ...common, type: 'daily', time: tm });
-      msg = 'Daily broadcast on — every day at ' + res.job.hm;
+      msg = '已開啟每日喊話, 每天 ' + res.job.hm + ' 自動播報';
     }
     toast(msg, 'ok');
     document.getElementById('txtContent').value = '';
@@ -494,43 +495,43 @@ async function refreshJobs() {
     const { jobs } = await api('GET', `/api/classes/${curId}/jobs`);
     const box = document.getElementById('jobList');
     if (!box) return;
-    if (!jobs.length) { box.innerHTML = '<div class="empty-state" style="padding:22px">No scheduled broadcasts<br><span class="muted" style="font-size:13px">Open “On-screen duration / Scheduling” above to add one.</span></div>'; return; }
+    if (!jobs.length) { box.innerHTML = '<div class="empty-state" style="padding:22px">暫無定時喊話<br><span class="muted" style="font-size:13px">在上方展開「停留時長 / 定時喊話」可安排</span></div>'; return; }
     box.innerHTML = jobs.map((j) => `
       <div class="msg-item">
         <div class="msg-bar" style="background:${esc(j.color || '#e11d48')}"></div>
         <div class="grow" style="min-width:0">
           <div class="row" style="gap:8px;flex-wrap:wrap">
-            ${j.type === 'daily' ? '<span class="badge badge-warn">Daily ' + esc(j.hm) + '</span>' : '<span class="badge badge-pri">Once</span>'}
-            <span class="muted" style="font-size:12px">Next: ${fmtTime(j.runAt)}</span>
-            ${j.voice === false ? '<span class="badge">Muted</span>' : '<span class="badge badge-pri">🔊 Voice</span>'}
-            ${j.duration ? '<span class="badge">Stay ' + fmtDuration(j.duration) + '</span>' : ''}
+            ${j.type === 'daily' ? '<span class="badge badge-warn">每天 ' + esc(j.hm) + '</span>' : '<span class="badge badge-pri">單次</span>'}
+            <span class="muted" style="font-size:12px">下次執行: ${fmtTime(j.runAt)}</span>
+            ${j.voice === false ? '<span class="badge">靜音</span>' : '<span class="badge badge-pri">🔊 播報</span>'}
+            ${j.duration ? '<span class="badge">停留' + fmtDuration(j.duration) + '</span>' : ''}
           </div>
           <div style="margin-top:4px;word-break:break-word">${esc(j.content)}</div>
         </div>
-        <button class="btn btn-sm" onclick="runJobNow('${j.id}')">Run now</button>
-        <button class="btn btn-sm btn-danger" onclick="cancelJob('${j.id}')">Cancel</button>
+        <button class="btn btn-sm" onclick="runJobNow('${j.id}')">立即喊一次</button>
+        <button class="btn btn-sm btn-danger" onclick="cancelJob('${j.id}')">取消</button>
       </div>`).join('');
   } catch (e) { /* ignore */ }
 }
 async function cancelJob(id) {
   try {
     await api('DELETE', `/api/classes/${curId}/jobs/${id}`);
-    toast('Scheduled broadcast cancelled', 'ok');
+    toast('已取消該定時喊話', 'ok');
     refreshJobs();
   } catch (e) { toast(e.message, 'err'); }
 }
 async function runJobNow(id) {
   try {
     const r = await api('POST', `/api/classes/${curId}/jobs/${id}/run`);
-    toast(r.delivered ? 'Broadcast now — the classroom is playing it' : 'Triggered, but the classroom is offline', r.delivered ? 'ok' : 'err');
+    toast(r.delivered ? '已立即喊出, 教室端正在播報' : '已觸發, 但教室端離線未送達', r.delivered ? 'ok' : 'err');
     refreshJobs(); refreshNotifs();
   } catch (e) { toast(e.message, 'err'); }
 }
 
 async function sendTest() {
   try {
-    const res = await api('POST', `/api/classes/${curId}/notify`, { content: 'Test broadcast: the notice system and sound are working properly.', voice: true, color: msgColor });
-    toast(res.notification.delivered ? 'Test notice broadcast' : 'Classroom offline — test notice not delivered', res.notification.delivered ? 'ok' : 'err');
+    const res = await api('POST', `/api/classes/${curId}/notify`, { content: '測試播報：通知系統運作正常，聲音正常。', voice: true, color: msgColor });
+    toast(res.notification.delivered ? '測試通知已播報' : '教室端離線，測試通知未送達', res.notification.delivered ? 'ok' : 'err');
     refreshNotifs();
   } catch (e) { toast(e.message, 'err'); }
 }
@@ -538,7 +539,7 @@ async function sendTest() {
 async function remoteMinimize() {
   try {
     await api('POST', `/api/classes/${curId}/minimize`);
-    toast('Minimize command sent', 'ok');
+    toast('已發送最小化指令', 'ok');
   } catch (e) { toast(e.message, 'err'); }
 }
 
@@ -552,21 +553,21 @@ function renderInviteCode(codeObj) {
     genRow.style.display = 'none';
     row.style.display = 'block';
     codeEl.textContent = codeObj.code;
-    hint.textContent = 'Invite codes never expire and can be used by several people. “Revoke” or “Regenerate” invalidates the old one.';
+    hint.textContent = '邀請碼長期有效、可多人使用；點選「作廢」或「重新產生」可讓舊碼失效。';
   } else {
     genRow.style.display = 'flex';
     row.style.display = 'none';
     codeEl.textContent = '';
-    hint.textContent = 'Generate an invite code and send it to a co-teacher.';
+    hint.textContent = '點選產生一個邀請碼，發給協同老師使用。';
   }
 }
 
 async function revokeInviteCode() {
-  if (!confirm('Revoke the current invite code? It stops working immediately; you can regenerate one any time.')) return;
+  if (!confirm('作廢目前邀請碼？作廢後原邀請碼將無法再被使用，可隨時重新產生。')) return;
   try {
     await api('DELETE', `/api/classes/${curId}/invite-code`);
     renderInviteCode(null);
-    toast('Invite code revoked', 'ok');
+    toast('邀請碼已作廢', 'ok');
   } catch (e) { toast(e.message, 'err'); }
 }
 
@@ -576,12 +577,12 @@ async function loadCoManage() {
   try {
     const data = await api('GET', `/api/classes/${curId}/invites`);
     renderInviteCode(data.code);
-    list.innerHTML = '<div class="muted" style="font-size:13px;margin-bottom:6px">Co-teachers joined:</div>' +
+    list.innerHTML = '<div class="muted" style="font-size:13px;margin-bottom:6px">已加入協同老師:</div>' +
       (data.members.length ? data.members.map((m) => `
         <div class="row spread" style="padding:6px 0">
-          <span><b>${esc(m.username)}</b> <span class="badge badge-warn">Co-teacher</span></span>
-          <button class="btn btn-sm btn-danger" onclick="removeMember('${m.id}')">Remove</button>
-        </div>`).join('') : '<div class="muted" style="font-size:13px">None yet. Send the invite code above to a co-teacher.</div>');
+          <span><b>${esc(m.username)}</b> <span class="badge badge-warn">協同</span></span>
+          <button class="btn btn-sm btn-danger" onclick="removeMember('${m.id}')">移除</button>
+        </div>`).join('') : '<div class="muted" style="font-size:13px">暫無，把上方邀請碼發給協同老師即可加入</div>');
   } catch (e) { /* ignore */ }
 }
 
@@ -589,26 +590,26 @@ async function makeInviteCode() {
   try {
     const r = await api('POST', `/api/classes/${curId}/invite-code`);
     renderInviteCode(r);
-    toast('Invite code generated', 'ok');
+    toast('已產生邀請碼', 'ok');
   } catch (e) { toast(e.message, 'err'); }
 }
 
 async function copyInviteCode() {
   const v = (document.getElementById('invCode').textContent || '').trim();
-  if (!v) return toast('Please generate an invite code first', 'err');
-  toast((await copyText(v)) ? 'Invite code copied' : 'Please copy manually', 'ok');
+  if (!v) return toast('請先產生邀請碼', 'err');
+  toast((await copyText(v)) ? '邀請碼已複製' : '請手動複製', 'ok');
 }
 
-/* co-teacher: join a class with an invite code */
+/* 協同帳號: 輸入邀請碼加入班級 */
 function renderJoinBox() {
   const box = document.getElementById('joinBox');
   if (!box) return;
   if (ME.user.type !== 'co') { box.innerHTML = ''; return; }
   box.innerHTML = `
     <div class="card" style="padding:12px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <span class="badge badge-pri" style="font-size:13px">🔑 Join class</span>
-      <input class="inp grow" id="joinCode" placeholder="Enter the invite code from the class owner" maxlength="12" style="text-transform:uppercase;letter-spacing:2px">
-      <button class="btn btn-pri btn-sm" onclick="joinByCode()">Join</button>
+      <span class="badge badge-pri" style="font-size:13px">🔑 加入班級</span>
+      <input class="inp grow" id="joinCode" placeholder="輸入班主任給你的邀請碼" maxlength="12" style="text-transform:uppercase;letter-spacing:2px">
+      <button class="btn btn-pri btn-sm" onclick="joinByCode()">加入</button>
     </div>`;
 }
 
@@ -616,10 +617,10 @@ async function joinByCode() {
   const el = document.getElementById('joinCode');
   if (!el) return;
   const code = (el.value || '').trim().toUpperCase();
-  if (!code) return toast('Please enter the invite code', 'err');
+  if (!code) return toast('請輸入邀請碼', 'err');
   try {
     const r = await api('POST', '/api/invite-code/accept', { code });
-    toast(r.already ? 'You are already in this class' : 'Joined class "' + (r.className || '') + '"', 'ok');
+    toast(r.already ? '你已在該班級中' : '已加入班級「' + (r.className || '') + '」', 'ok');
     ME = await api('GET', '/api/me');
     curId = null;
     boot();
@@ -627,10 +628,10 @@ async function joinByCode() {
 }
 
 async function removeMember(uid) {
-  if (!confirm('Remove this teacher from the class?')) return;
+  if (!confirm('將該老師移出本班？')) return;
   try {
     await api('DELETE', `/api/classes/${curId}/members/${uid}`);
-    toast('Removed', 'ok');
+    toast('已移除', 'ok');
     ME = await api('GET', '/api/me');
     cur = ME.classes.find((c) => c.id === curId);
     loadCoManage();
@@ -640,7 +641,7 @@ async function removeMember(uid) {
 async function handleInvite(id, act) {
   try {
     await api('POST', `/api/invites/${id}/${act}`);
-    toast(act === 'accept' ? 'Invitation accepted' : 'Declined', 'ok');
+    toast(act === 'accept' ? '已接受邀請' : '已拒絕', 'ok');
     ME = await api('GET', '/api/me');
     renderInvites();
     curId = null; boot();
@@ -649,10 +650,10 @@ async function handleInvite(id, act) {
 
 async function doLogout() {
   try { await api('POST', '/api/auth/logout'); } catch (e) {}
-  location.href = '/en/login';
+  location.href = '/zh-Hant/login';
 }
 
-/* ================= classroom presence polling ================= */
+/* ================= 教室線上輪詢 ================= */
 function applyPresence() {
   ME.classes.forEach((c) => {
     document.querySelectorAll(`[data-cid="${c.id}"]`).forEach((el) => {
@@ -661,7 +662,7 @@ function applyPresence() {
       if (!d) return;
       d.classList.toggle('on', c.online);
       d.classList.toggle('off', !c.online);
-      if (st) st.textContent = c.online ? 'Classroom online' : 'Classroom offline';
+      if (st) st.textContent = c.online ? '教室線上' : '教室離線';
     });
   });
 }
@@ -678,18 +679,18 @@ async function pollPresence() {
   } catch (e) { /* ignore */ }
 }
 
-/* ================= start ================= */
+/* ================= 啟動 ================= */
 (async function init() {
   try {
     ME = await api('GET', '/api/me');
     boot();
     setInterval(pollPresence, 6000);
-    // refresh the co-teacher list once content is rendered
+    // 渲染內容後載入協同老師列表
     setInterval(() => { if (cur && cur.isOwner && document.getElementById('coList')) loadCoManage(); }, 10000);
-    // auto-refresh scheduled broadcasts (so finished ones disappear promptly)
+    // 定時喊話列表自動重新整理(到時執行後及時移除)
     setInterval(() => { if (document.getElementById('jobList')) refreshJobs(); }, 10000);
   } catch (e) {
-    if (e.message !== 'Not signed in') toast(e.message, 'err');
+    if (e.message !== '尚未登入') toast(e.message, 'err');
   }
 })();
 </script>

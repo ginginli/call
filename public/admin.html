@@ -33,7 +33,8 @@
   <div class="row" style="gap:8px">
     <span class="badge" id="keyTag">口令未验证</span>
     <span class="language-list">
-      <a class="curr" href="/admin" title="中文">中文</a>
+      <a class="curr" href="/admin" title="简体中文">简体</a>
+      <a href="/zh-Hant/admin" title="繁體中文">繁體</a>
       <a href="/en/admin" title="English">English</a>
     </span>
     <a class="btn btn-sm" href="/login">返回登录页</a>
@@ -83,7 +84,7 @@
   <!-- 卡号明细: 卡密 ↔ 注册状态 -->
   <div class="card admin-card hide" id="listCard">
     <div class="spread" style="gap:10px;flex-wrap:wrap">
-      <h3 style="margin:0;font-size:15px">④ 卡号明细（卡密 ↔ 注册状态）</h3>
+      <h3 style="margin:0;font-size:15px">④ 卡号明细（发放 / 注册状态）</h3>
       <div class="row" style="gap:8px">
         <input class="inp" id="q" placeholder="搜卡号 / 用户名" style="max-width:200px"
                onkeydown="if(event.key==='Enter'){event.preventDefault();checkStock();}">
@@ -91,6 +92,7 @@
       </div>
     </div>
     <p class="muted tip" id="listSum">共 0 张</p>
+    <p class="muted tip" style="margin-top:2px">「发放」记录你是否已把这张卡交付给客户（线下动作），与卡有没有被注册无关。点「标记已发放」即可记录，点错了可撤销。</p>
     <div class="tb-scroll" id="cardTable"></div>
   </div>
 
@@ -191,14 +193,15 @@ async function checkStock(silent) {
   }
 }
 
-/* 卡号明细: 未使用 / 已注册(绑定到哪个账号) */
+/* 卡号明细: 发放(是否已交付客户, 与注册无关) / 注册(未使用 / 已注册绑定到哪个账号) */
 function renderList(d) {
   const cards = d.cards || [];
   const usedCount = cards.filter((c) => c.status === 'used').length;
+  const dvCount = cards.filter((c) => c.delivered).length;
   const kw = ($('q').value || '').trim();
   $('listSum').textContent = kw
-    ? `筛选出 ${cards.length} 张（已注册 ${usedCount} 张）`
-    : `全部 ${(d.total || 0)} 张 · 其中已注册 ${(d.used || 0)} 张 · 未使用 ${(d.total || 0) - (d.used || 0)} 张`;
+    ? `筛选出 ${cards.length} 张（已发放 ${dvCount} 张 · 已注册 ${usedCount} 张）`
+    : `全部 ${(d.total || 0)} 张 · 已发放 ${(d.delivered || 0)} 张 · 已注册 ${(d.used || 0)} 张 · 未使用 ${(d.total || 0) - (d.used || 0)} 张`;
 
   const box = $('cardTable');
   if (!cards.length) {
@@ -211,13 +214,20 @@ function renderList(d) {
     const st = used
       ? '<span class="badge badge-ok">已注册</span>'
       : '<span class="badge">未使用</span>';
+    const dv = c.delivered
+      ? `<span class="badge badge-pri">已发放</span><br><span class="muted mini">${fmtTime(c.deliveredAt)}</span>`
+      : '<span class="badge badge-warn">未发放</span>';
     const who = used && c.user
       ? `<b>${esc(c.user.username)}</b><br><span class="muted mini">${fmtTime(c.usedAt)} 注册</span>`
       : '<span class="muted">—</span>';
-    const act = used ? '' : `<button class="btn btn-sm" onclick="copyOne('${esc(c.code)}')">复制</button>`;
+    const dvBtn = c.delivered
+      ? `<button class="btn btn-sm" onclick="deliverCard('${esc(c.id)}', false)">撤销发放</button>`
+      : `<button class="btn btn-sm btn-pri" onclick="deliverCard('${esc(c.id)}', true)">标记已发放</button>`;
+    const act = dvBtn + (used ? '' : ` <button class="btn btn-sm" onclick="copyOne('${esc(c.code)}')">复制</button>`);
     return `<tr>
       <td class="cd mono">${esc(c.code)}</td>
       <td><span class="badge ${isCo ? 'badge-pri' : 'badge-ok'} mini">${isCo ? '协同' : '普通'}</span></td>
+      <td>${dv}</td>
       <td>${st}</td>
       <td>${who}</td>
       <td class="muted mini">${fmtTime(c.createdAt)}</td>
@@ -227,10 +237,21 @@ function renderList(d) {
 
   box.innerHTML = `<table class="tb">
     <thead><tr>
-      <th>卡号</th><th>类型</th><th>状态</th><th>绑定账号</th><th>生成时间</th><th></th>
+      <th>卡号</th><th>类型</th><th>发放</th><th>注册</th><th>绑定账号</th><th>生成时间</th><th></th>
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
+}
+
+/* 标记某张卡是否已发放给客户（与注册无关，可撤销） */
+async function deliverCard(id, delivered) {
+  const k = keyOf();
+  if (!k) return;
+  try {
+    await post('/api/cards/deliver', { adminKey: k, id, delivered });
+    toast(delivered ? '已标记为已发放' : '已撤销发放标记', 'ok');
+    checkStock(true);
+  } catch (e) { toast(e.message, 'err'); }
 }
 
 /* ---------- 激活卡号申请 ---------- */

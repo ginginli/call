@@ -1,4 +1,4 @@
-/* 公共前端工具 */
+/* 公共前端工具（繁體中文站） */
 async function api(method, url, body) {
   const opt = { method, headers: {} };
   if (body !== undefined) {
@@ -10,10 +10,10 @@ async function api(method, url, body) {
   try { data = await res.json(); } catch (e) { /* ignore */ }
   if (!res.ok) {
     if (res.status === 401 && !/\/auth\//.test(url)) {
-      location.href = '/login';
-      throw new Error('未登录');
+      location.href = '/zh-Hant/login';
+      throw new Error('尚未登入');
     }
-    throw new Error((data && data.error) || ('请求失败(' + res.status + ')'));
+    throw new Error((data && data.error) || ('請求失敗(' + res.status + ')'));
   }
   return data;
 }
@@ -26,7 +26,7 @@ function esc(s) {
 
 function fmtTime(iso) {
   try {
-    return new Date(iso).toLocaleString('zh-CN', { hour12: false, month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return new Date(iso).toLocaleString('zh-TW', { hour12: false, month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   } catch (e) { return ''; }
 }
 
@@ -42,14 +42,14 @@ function toast(msg, type) {
 }
 
 async function copyText(t) {
-  // 方式1: Clipboard API(需 https / localhost 安全上下文)
+  // 方式1: Clipboard API(需 https / localhost 安全環境)
   try {
     if (navigator.clipboard && window.isSecureContext) {
       await navigator.clipboard.writeText(t);
       return true;
     }
-  } catch (e) { /* 继续走兼容方案 */ }
-  // 方式2: 临时 textarea + execCommand('copy'), 兼容 http 及旧浏览器
+  } catch (e) { /* 繼續走相容方案 */ }
+  // 方式2: 暫時 textarea + execCommand('copy'), 相容 http 及舊瀏覽器
   try {
     const ta = document.createElement('textarea');
     ta.value = t;
@@ -61,16 +61,16 @@ async function copyText(t) {
     const ok = document.execCommand('copy');
     document.body.removeChild(ta);
     if (ok) return true;
-  } catch (e) { /* 下面返回 false */ }
+  } catch (e) { /* 下面回傳 false */ }
   return false;
 }
 
 /* ---------- Google Analytics (GA4) ---------- */
-/* 全站访问统计。即使 www.googletagmanager.com 被网络屏蔽, 这里也只是把事件入队,
-   不会阻塞页面渲染; gtag.js 加载成功后才真正上报。 */
+/* 全站造訪統計。即使 www.googletagmanager.com 被網路封鎖, 這裡也只是把事件排入佇列,
+   不會阻擋頁面渲染; gtag.js 載入成功後才真正上報。 */
 (function () {
   var GA_ID = 'G-ZNQCX7BSM0';
-  if (window.gtag) return;                                   // 已注入过就不重复
+  if (window.gtag) return;                                   // 已注入過就不重複
   window.dataLayer = window.dataLayer || [];
   window.gtag = function () { window.dataLayer.push(arguments); };
   window.gtag('js', new Date());

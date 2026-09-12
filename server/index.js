@@ -182,6 +182,13 @@ app.get('/en/app', (req, res) => res.sendFile(path.join(__dirname, '..', 'public
 app.get('/en/room', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'en', 'room.html')));
 app.get('/en/admin', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'en', 'admin.html')));
 
+/* 繁體中文站點 (public/zh-Hant/) */
+app.get('/zh-Hant', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'zh-Hant', 'index.html')));
+app.get('/zh-Hant/login', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'zh-Hant', 'login.html')));
+app.get('/zh-Hant/app', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'zh-Hant', 'app.html')));
+app.get('/zh-Hant/room', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'zh-Hant', 'room.html')));
+app.get('/zh-Hant/admin', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'zh-Hant', 'admin.html')));
+
 /* 静态资源: 放在页面路由之后, 避免 /en 被目录形式重定向成 301 */
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.get('/api/health', (req, res) => res.json({ ok: true }));
@@ -252,6 +259,11 @@ app.get('/api/auth/demo-cards', (req, res) => {
 });
 
 /* ---- 激活卡号申请(落地页 / 注册页提交, 无需登录) ---- */
+/* 页面语言: zh=简体 / zh-Hant=繁體 / en=English */
+const PAGE_LANGS = { zh: '中文', 'zh-Hant': '繁體中文', en: 'English' };
+function normLang(v) { return Object.prototype.hasOwnProperty.call(PAGE_LANGS, v) ? v : 'zh'; }
+function langLabel(v) { return PAGE_LANGS[normLang(v)]; }
+
 function clientIp(req) {
   const fwd = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
   return fwd || req.socket.remoteAddress || '';
@@ -278,7 +290,7 @@ async function notifyCardRequestByMail(rec, req) {
     ['联系邮箱', rec.contact],
     ['补充说明', rec.note || '（无）'],
     ['提交时间', time],
-    ['页面语言', rec.lang === 'en' ? 'English' : '中文'],
+    ['页面语言', langLabel(rec.lang)],
     ['来源 IP', rec.ip || '未知'],
     ['申请编号', rec.id],
   ];
@@ -321,7 +333,7 @@ app.post('/api/card-request', (req, res) => {
   if (!dup) {
     const rec = {
       id: nextId('cr'), contact: c, note: nt,
-      lang: lang === 'en' ? 'en' : 'zh', status: 'pending',
+      lang: normLang(lang), status: 'pending',
       createdAt: nowISO(), ip: clientIp(req),
     };
     db.cardRequests.push(rec);
@@ -381,14 +393,15 @@ app.post('/api/cards/generate', (req, res) => {
   const out = [];
   for (let i = 0; i < n; i++) {
     const code = genCode(type);
-    db.cards.push({ id: nextId('cd'), code, type, usedBy: null, createdAt: nowISO() });
+    db.cards.push({ id: nextId('cd'), code, type, usedBy: null, delivered: false, createdAt: nowISO() });
     out.push(code);
   }
   persist();
   res.json({ ok: true, codes: out });
 });
 
-/* 发卡后台: 卡号明细(需发卡口令)。每张卡都带注册状态: 未使用 / 已注册(绑定到哪个账号) */
+/* 发卡后台: 卡号明细(需发卡口令)。每张卡都带注册状态: 未使用 / 已注册(绑定到哪个账号)
+   以及发放状态: 未发放 / 已发放(是否已经线下交付给客户, 与注册与否无关) */
 app.post('/api/cards/list', (req, res) => {
   const { adminKey, q } = req.body || {};
   if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: '发卡口令错误' });
@@ -396,9 +409,12 @@ app.post('/api/cards/list', (req, res) => {
   const all = db.cards.slice().reverse().map((c) => {
     const u = c.usedBy ? userById.get(c.usedBy) : null;
     return {
+      id: c.id,
       code: c.code,
       type: c.type,
       createdAt: c.createdAt,
+      delivered: !!c.delivered,
+      deliveredAt: c.deliveredAt || null,
       status: c.usedBy ? 'used' : 'unused',
       usedAt: c.usedAt || null,
       user: u ? { username: u.username, createdAt: u.createdAt, type: u.type } : null,
@@ -412,11 +428,26 @@ app.post('/api/cards/list', (req, res) => {
   res.json({
     total: all.length,
     used: all.filter((c) => c.status === 'used').length,
+    delivered: all.filter((c) => c.delivered).length,
     unusedOwner: all.filter((c) => c.status === 'unused' && c.type !== 'co').length,
     unusedCo: all.filter((c) => c.status === 'unused' && c.type === 'co').length,
     usingDefaultKey: ADMIN_KEY === 'siyunx-admin',
     cards: list.slice(0, 300),
   });
+});
+
+/* 发卡后台: 标记某张卡是否已发放给客户。
+   delivered 省略或为 true 即标记已发放, 传 false 撤销标记。 */
+app.post('/api/cards/deliver', (req, res) => {
+  const { adminKey, id, delivered } = req.body || {};
+  if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: '发卡口令错误' });
+  const c = db.cards.find((x) => x.id === id);
+  if (!c) return res.status(404).json({ error: '卡号不存在' });
+  const on = delivered !== false;
+  c.delivered = on;
+  c.deliveredAt = on ? nowISO() : null;
+  persist();
+  res.json({ ok: true, delivered: on, deliveredAt: c.deliveredAt });
 });
 
 /* ---- 账号与班级 ---- */

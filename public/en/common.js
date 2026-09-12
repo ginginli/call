@@ -64,3 +64,20 @@ async function copyText(t) {
   } catch (e) { /* returns false below */ }
   return false;
 }
+
+/* ---------- Google Analytics (GA4) ---------- */
+/* Site-wide traffic stats. If www.googletagmanager.com is blocked on the network,
+   events are merely queued here and never block rendering; reporting starts only
+   once gtag.js loads. */
+(function () {
+  var GA_ID = 'G-ZNQCX7BSM0';
+  if (window.gtag) return;                                   // already injected
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function () { window.dataLayer.push(arguments); };
+  window.gtag('js', new Date());
+  window.gtag('config', GA_ID);
+  var s = document.createElement('script');
+  s.async = true;
+  s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
+  document.head.appendChild(s);
+})();

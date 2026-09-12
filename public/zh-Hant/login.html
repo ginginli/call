@@ -1,102 +1,102 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>登录 · 班级喊话系统</title>
+<title>登入 · 班級喊話系統</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <div class="language-list floating">
-  <a class="curr" href="/login" title="简体中文">简体</a>
-  <a href="/zh-Hant/login" title="繁體中文">繁體</a>
+  <a href="/login" title="简体中文">简体</a>
+  <a class="curr" href="/zh-Hant/login" title="繁體中文">繁體</a>
   <a href="/en/login" title="English">English</a>
 </div>
 <div class="auth-bg">
   <div class="auth-box">
-    <a class="back-home" href="/">← 返回首页</a>
+    <a class="back-home" href="/zh-Hant/">← 返回首頁</a>
     <div class="brand">
       <div class="logo">📢</div>
       <div>
-        <h1>班级喊话系统</h1>
-        <p>网页发通知 · 教室自动全屏播报</p>
+        <h1>班級喊話系統</h1>
+        <p>網頁發通知 · 教室自動全螢幕播報</p>
       </div>
     </div>
 
     <div class="card">
       <div class="tabs">
-        <button id="tabLogin" class="on" onclick="showTab('login')">登录</button>
-        <button id="tabReg" onclick="showTab('reg')">注册账号</button>
-        <button id="tabForgot" onclick="showTab('forgot')">忘记密码</button>
+        <button id="tabLogin" class="on" onclick="showTab('login')">登入</button>
+        <button id="tabReg" onclick="showTab('reg')">註冊帳號</button>
+        <button id="tabForgot" onclick="showTab('forgot')">忘記密碼</button>
       </div>
 
-      <!-- 登录 -->
+      <!-- 登入 -->
       <form class="auth-pane" id="paneLogin" onsubmit="return doLogin(event)">
-        <h2>登录后台</h2>
-        <label class="lbl">用户名</label>
+        <h2>登入後台</h2>
+        <label class="lbl">使用者名稱</label>
         <input class="inp" id="liUser" autocomplete="username" required>
-        <label class="lbl">密码</label>
+        <label class="lbl">密碼</label>
         <input class="inp" id="liPass" type="password" autocomplete="current-password" required>
         <div style="height:18px"></div>
-        <button class="btn btn-pri btn-block" type="submit">登 录</button>
+        <button class="btn btn-pri btn-block" type="submit">登 入</button>
       </form>
 
-      <!-- 注册 -->
+      <!-- 註冊 -->
       <form class="auth-pane hide" id="paneReg" onsubmit="return doReg(event)">
-        <h2>注册账号</h2>
-        <p class="sub">第一次使用需激活卡号，注册成功自动进入后台</p>
-        <label class="lbl">激活卡号</label>
+        <h2>註冊帳號</h2>
+        <p class="sub">第一次使用需啟用卡號，註冊成功自動進入後台</p>
+        <label class="lbl">啟用卡號</label>
         <input class="inp mono" id="rgCard" placeholder="例如 OWN-XXXX-XXXX" style="letter-spacing:1px">
-        <label class="lbl">登录用户名（请牢记，找回密码需用到）</label>
+        <label class="lbl">登入使用者名稱（請牢記，找回密碼需用到）</label>
         <input class="inp" id="rgUser" maxlength="20" required>
-        <label class="lbl">密码(至少 6 位)</label>
+        <label class="lbl">密碼(至少 6 位)</label>
         <input class="inp" id="rgPass" type="password" required>
-        <label class="lbl">确认密码</label>
+        <label class="lbl">確認密碼</label>
         <input class="inp" id="rgPass2" type="password" required>
-        <label class="lbl">班级邀请码（选填 · 协同老师填写）</label>
-        <input class="inp mono" id="rgInvite" placeholder="班主任给你的邀请码" maxlength="12" style="text-transform:uppercase;letter-spacing:2px">
+        <label class="lbl">班級邀請碼（選填 · 協同老師填寫）</label>
+        <input class="inp mono" id="rgInvite" placeholder="班主任給你的邀請碼" maxlength="12" style="text-transform:uppercase;letter-spacing:2px">
         <div style="height:18px"></div>
-        <button class="btn btn-pri btn-block" type="submit">立即注册</button>
-        <p class="sub" style="margin:12px 0 0;line-height:1.6" id="rgTip">普通激活卡注册后自带 2 个班级；协同授权码（CO- 开头）注册的是协同账号，不能新建班级</p>
+        <button class="btn btn-pri btn-block" type="submit">立即註冊</button>
+        <p class="sub" style="margin:12px 0 0;line-height:1.6" id="rgTip">普通啟用卡註冊後自帶 2 個班級；協同授權碼（CO- 開頭）註冊的是協同帳號，不能新建班級</p>
 
-        <!-- 申请激活卡号 -->
+        <!-- 申請啟用卡號 -->
         <div class="req-box" id="reqBox">
-          <div class="req-h">还没有激活卡号？</div>
+          <div class="req-h">還沒有啟用卡號？</div>
           <p class="req-p">
-            填写你的联系邮箱提交申请，我们会尽快把激活卡号发给你；也可以直接把申请发到邮箱
+            填寫你的聯絡電子信箱提交申請，我們會盡快把啟用卡號寄給你；也可以直接把申請寄到信箱
             <b class="mono" id="reqMail">ladyiney25@gmail.com</b>
-            <button class="btn btn-sm" type="button" onclick="copyReqMail()">复制</button>
+            <button class="btn btn-sm" type="button" onclick="copyReqMail()">複製</button>
           </p>
-          <input class="inp" id="reqContact" type="email" placeholder="你的联系邮箱，例如 teacher@example.com"
+          <input class="inp" id="reqContact" type="email" placeholder="你的聯絡電子信箱，例如 teacher@example.com"
                  onkeydown="if(event.key==='Enter'){event.preventDefault();submitCardRequest();}">
-          <textarea class="inp" id="reqNote" rows="2" maxlength="200" placeholder="想说明的情况（选填，如：任教年级、班级数量）"
+          <textarea class="inp" id="reqNote" rows="2" maxlength="200" placeholder="想說明的狀況（選填，如：任教年級、班級數量）"
                     style="margin-top:8px" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitCardRequest();}"></textarea>
           <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
-            <button class="btn btn-pri btn-sm" type="button" id="reqBtn" onclick="submitCardRequest()">提交申请</button>
-            <button class="btn btn-sm" type="button" onclick="mailtoCardRequest()">📧 用邮箱发送申请</button>
+            <button class="btn btn-pri btn-sm" type="button" id="reqBtn" onclick="submitCardRequest()">提交申請</button>
+            <button class="btn btn-sm" type="button" onclick="mailtoCardRequest()">📧 用信箱寄送申請</button>
           </div>
         </div>
       </form>
 
-      <!-- 忘记密码 -->
+      <!-- 忘記密碼 -->
       <form class="auth-pane hide" id="paneForgot" onsubmit="return doForgot(event)">
-        <h2>找回密码</h2>
-        <p class="sub">输入用户名 + 注册时使用的激活卡号</p>
-        <label class="lbl">用户名</label>
+        <h2>找回密碼</h2>
+        <p class="sub">輸入使用者名稱 + 註冊時使用的啟用卡號</p>
+        <label class="lbl">使用者名稱</label>
         <input class="inp" id="foUser" required>
-        <label class="lbl">激活卡号</label>
+        <label class="lbl">啟用卡號</label>
         <input class="inp mono" id="foCard" placeholder="例如 OWN-XXXX-XXXX">
-        <label class="lbl">新密码(至少 6 位)</label>
+        <label class="lbl">新密碼(至少 6 位)</label>
         <input class="inp" id="foPass" type="password" required>
         <div style="height:18px"></div>
-        <button class="btn btn-pri btn-block" type="submit">重置密码</button>
-        <p class="sub" style="margin:12px 0 0;line-height:1.6">卡号也忘了？发邮件到 <b>ladyiney25@gmail.com</b> 说明情况，我们帮你找回。</p>
+        <button class="btn btn-pri btn-block" type="submit">重設密碼</button>
+        <p class="sub" style="margin:12px 0 0;line-height:1.6">卡號也忘了？寄信到 <b>ladyiney25@gmail.com</b> 說明狀況，我們幫你找回。</p>
       </form>
     </div>
   </div>
 </div>
 
-<script src="/common.js"></script>
+<script src="/zh-Hant/common.js"></script>
 <script>
 const REQ_EMAIL = 'ladyiney25@gmail.com';
 
@@ -113,7 +113,7 @@ async function doLogin(e) {
   btn.disabled = true;
   try {
     await api('POST', '/api/auth/login', { username: liUser.value.trim(), password: liPass.value });
-    location.href = '/app';
+    location.href = '/zh-Hant/app';
   } catch (err) {
     toast(err.message, 'err'); btn.disabled = false;
   }
@@ -121,8 +121,8 @@ async function doLogin(e) {
 
 async function doReg(e) {
   e.preventDefault();
-  if (rgPass.value.length < 6) return toast('密码至少 6 位', 'err');
-  if (rgPass.value !== rgPass2.value) return toast('两次输入的密码不一致', 'err');
+  if (rgPass.value.length < 6) return toast('密碼至少 6 位', 'err');
+  if (rgPass.value !== rgPass2.value) return toast('兩次輸入的密碼不一致', 'err');
   const btn = e.target.querySelector('button[type=submit]');
   btn.disabled = true;
   try {
@@ -130,53 +130,53 @@ async function doReg(e) {
       username: rgUser.value.trim(), password: rgPass.value, cardCode: rgCard.value.trim(),
     });
     await joinByInviteCode((rgInvite.value || '').trim().toUpperCase());
-    location.href = '/app';
+    location.href = '/zh-Hant/app';
   } catch (err) {
     toast(err.message, 'err'); btn.disabled = false;
   }
 }
 
-/* 注册时填了邀请码 → 自动加入对应班级 */
+/* 註冊時填了邀請碼 → 自動加入對應班級 */
 async function joinByInviteCode(code) {
   if (!code) return;
   try {
     const r = await api('POST', '/api/invite-code/accept', { code });
-    toast(r.already ? '你已在该班级中' : '已加入班级「' + (r.className || '') + '」', 'ok');
+    toast(r.already ? '你已在該班級中' : '已加入班級「' + (r.className || '') + '」', 'ok');
   } catch (e) { toast(e.message, 'err'); }
 }
 
 async function doForgot(e) {
   e.preventDefault();
-  if (foPass.value.length < 6) return toast('新密码至少 6 位', 'err');
+  if (foPass.value.length < 6) return toast('新密碼至少 6 位', 'err');
   const btn = e.target.querySelector('button[type=submit]');
   btn.disabled = true;
   try {
     await api('POST', '/api/auth/forgot', { username: foUser.value.trim(), cardCode: foCard.value.trim(), password: foPass.value });
-    toast('密码已重置, 请重新登录', 'ok');
+    toast('密碼已重設, 請重新登入', 'ok');
     showTab('login');
   } catch (err) {
     toast(err.message, 'err');
   } finally { btn.disabled = false; }
 }
 
-/* ---------- 申请激活卡号 ---------- */
+/* ---------- 申請啟用卡號 ---------- */
 function reqPayload() {
   return {
     contact: (document.getElementById('reqContact').value || '').trim(),
     note: (document.getElementById('reqNote').value || '').trim(),
-    lang: 'zh',
+    lang: 'zh-Hant',
   };
 }
 
 async function submitCardRequest() {
   const p = reqPayload();
-  if (p.contact.length < 3) return toast('请先填写联系邮箱', 'err');
+  if (p.contact.length < 3) return toast('請先填寫聯絡電子信箱', 'err');
   const btn = document.getElementById('reqBtn');
   btn.disabled = true;
   try {
     await api('POST', '/api/card-request', p);
-    toast('申请已提交，我们会在 1 个工作日内联系你', 'ok');
-    toast('也可直接发邮件到 ' + REQ_EMAIL, 'ok');
+    toast('申請已提交，我們會在 1 個工作日內與你聯絡', 'ok');
+    toast('也可直接寄信到 ' + REQ_EMAIL, 'ok');
     document.getElementById('reqNote').value = '';
   } catch (err) {
     toast(err.message, 'err');
@@ -185,12 +185,12 @@ async function submitCardRequest() {
 
 function mailtoCardRequest() {
   const p = reqPayload();
-  const subject = '申请激活卡号（班级喊话系统）';
+  const subject = '申請啟用卡號（班級喊話系統）';
   const body = [
-    '你好，我想申请班级喊话系统的激活卡号。',
+    '你好，我想申請班級喊話系統的啟用卡號。',
     '',
-    '联系邮箱：' + (p.contact || '（请填写）'),
-    '补充说明：' + (p.note || '（无）'),
+    '聯絡電子信箱：' + (p.contact || '（請填寫）'),
+    '補充說明：' + (p.note || '（無）'),
   ].join('\n');
   location.href = 'mailto:' + REQ_EMAIL
     + '?subject=' + encodeURIComponent(subject)
@@ -199,10 +199,10 @@ function mailtoCardRequest() {
 
 async function copyReqMail() {
   const ok = await copyText(REQ_EMAIL);
-  toast(ok ? '邮箱已复制：' + REQ_EMAIL : '请手动复制：' + REQ_EMAIL, ok ? 'ok' : 'err');
+  toast(ok ? '電子信箱已複製：' + REQ_EMAIL : '請手動複製：' + REQ_EMAIL, ok ? 'ok' : 'err');
 }
 
-/* 从落地页带 #reg / #card 进来时直接定位到对应位置 */
+/* 從落地頁帶 #reg / #card 進來時直接定位到對應位置 */
 (function applyHash() {
   const h = (location.hash || '').toLowerCase();
   if (h !== '#reg' && h !== '#card') return;

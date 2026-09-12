@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Card Admin · Class Broadcast System</title>
+<title>發卡後台 · 班級喊話系統</title>
 <link rel="stylesheet" href="/style.css">
 <style>
   .admin-wrap { max-width: 880px; margin: 22px auto 60px; padding: 0 18px; display: flex; flex-direction: column; gap: 16px; }
@@ -29,116 +29,116 @@
 <body>
 
 <header class="topbar">
-  <div class="mini-logo"><div class="logo">🎫</div><span>Card Admin</span></div>
+  <div class="mini-logo"><div class="logo">🎫</div><span>發卡後台</span></div>
   <div class="row" style="gap:8px">
-    <span class="badge" id="keyTag">Key not verified</span>
+    <span class="badge" id="keyTag">口令未驗證</span>
     <span class="language-list">
       <a href="/admin" title="简体中文">简体</a>
-      <a href="/zh-Hant/admin" title="繁體中文">繁體</a>
-      <a class="curr" href="/en/admin" title="English">English</a>
+      <a class="curr" href="/zh-Hant/admin" title="繁體中文">繁體</a>
+      <a href="/en/admin" title="English">English</a>
     </span>
-    <a class="btn btn-sm" href="/en/login">Back to sign in</a>
+    <a class="btn btn-sm" href="/zh-Hant/login">返回登入頁</a>
   </div>
 
 </header>
 
 <div class="admin-wrap">
 
-  <!-- key -->
+  <!-- 口令 -->
   <div class="card admin-card">
-    <h3 style="margin:0 0 10px;font-size:15px">① Enter the card-issuing key</h3>
+    <h3 style="margin:0 0 10px;font-size:15px">① 輸入發卡口令</h3>
     <div class="row" style="gap:8px;flex-wrap:wrap">
-      <input class="inp grow" id="adminKey" type="password" placeholder="Card key (CARD_KEY)" style="max-width:320px">
-      <button class="btn btn-sm" onclick="toggleKey()" id="eyeBtn">Show</button>
-      <button class="btn btn-pri btn-sm" onclick="checkStock()">Verify &amp; view</button>
+      <input class="inp grow" id="adminKey" type="password" placeholder="發卡口令 (CARD_KEY)" style="max-width:320px">
+      <button class="btn btn-sm" onclick="toggleKey()" id="eyeBtn">顯示</button>
+      <button class="btn btn-pri btn-sm" onclick="checkStock()">驗證並檢視</button>
     </div>
-    <p class="muted tip">The key is stored in the server's <code>.env</code> file. To change it, run <code>bash deploy.sh key NEW_KEY</code> on the server — it takes effect immediately. The key is kept only in this tab and is gone once you close it.</p>
+    <p class="muted tip">口令存在伺服器的 <code>.env</code> 檔案裡。改口令：在伺服器執行 <code>bash deploy.sh key 新口令</code>，改完立刻生效。口令只保存在本分頁，關掉就沒了。</p>
   </div>
 
-  <!-- stock -->
+  <!-- 庫存 -->
   <div class="card admin-card hide" id="stockCard">
     <div class="spread">
-      <h3 style="margin:0;font-size:15px">② Stock overview</h3>
-      <button class="btn btn-sm" onclick="checkStock()">Refresh</button>
+      <h3 style="margin:0;font-size:15px">② 庫存總覽</h3>
+      <button class="btn btn-sm" onclick="checkStock()">重新整理</button>
     </div>
     <div class="stat" style="margin-top:14px">
-      <div><div class="n" id="stOwner">-</div><div class="muted" style="font-size:12px">Standard cards (unused)</div></div>
-      <div><div class="n" id="stCo">-</div><div class="muted" style="font-size:12px">Co-teacher codes (unused)</div></div>
-      <div><div class="n" id="stUsed">-</div><div class="muted" style="font-size:12px">Registered</div></div>
+      <div><div class="n" id="stOwner">-</div><div class="muted" style="font-size:12px">普通啟用卡(未用)</div></div>
+      <div><div class="n" id="stCo">-</div><div class="muted" style="font-size:12px">協同授權碼(未用)</div></div>
+      <div><div class="n" id="stUsed">-</div><div class="muted" style="font-size:12px">已註冊使用</div></div>
     </div>
     <div class="hide" id="defaultKeyWarn" style="margin-top:14px;padding:9px 12px;border-radius:10px;background:#fef3e2;color:#b45309;font-size:13px;line-height:1.6">
-      Warning: the server still uses the default key <b>siyunx-admin</b>, so anyone who knows the URL can issue cards. Run <code>bash deploy.sh key YOUR_KEY</code> on the server to change it now.
+      警告：伺服器還在用預設口令 <b>siyunx-admin</b>，知道網址的人都能自己發卡。請在伺服器執行 <code>bash deploy.sh key 你自己的口令</code> 立刻改掉。
     </div>
   </div>
 
-  <!-- card requests -->
+  <!-- 啟用卡號申請 -->
   <div class="card admin-card hide" id="reqCard">
     <div class="spread">
-      <h3 style="margin:0;font-size:15px">③ Activation card requests</h3>
-      <button class="btn btn-sm" onclick="loadRequests()">Refresh</button>
+      <h3 style="margin:0;font-size:15px">③ 啟用卡號申請</h3>
+      <button class="btn btn-sm" onclick="loadRequests()">重新整理</button>
     </div>
-    <p class="muted tip" id="reqSum">No requests yet</p>
-    <p class="muted tip" style="margin-top:2px">Requests come from the “Request a free activation card” form on the landing page and the sign-up page. Follow up on the contact details and issue a card — teachers can also email <b class="mono">ladyiney25@gmail.com</b> directly.</p>
+    <p class="muted tip" id="reqSum">暫無申請</p>
+    <p class="muted tip" style="margin-top:2px">申請來自落地頁與註冊頁的「申請啟用卡號」表單。請依聯絡方式回訪並發卡；老師也可以直接寄信到 <b class="mono">ladyiney25@gmail.com</b>。</p>
     <div class="tb-scroll" id="reqList"></div>
   </div>
 
-  <!-- card details: card ↔ registration status -->
+  <!-- 卡號明細: 卡密 ↔ 註冊狀態 -->
   <div class="card admin-card hide" id="listCard">
     <div class="spread" style="gap:10px;flex-wrap:wrap">
-      <h3 style="margin:0;font-size:15px">④ Card details (delivery / registration)</h3>
+      <h3 style="margin:0;font-size:15px">④ 卡號明細（發放 / 註冊狀態）</h3>
       <div class="row" style="gap:8px">
-        <input class="inp" id="q" placeholder="Search card / username" style="max-width:200px"
+        <input class="inp" id="q" placeholder="搜卡號 / 使用者名稱" style="max-width:200px"
                onkeydown="if(event.key==='Enter'){event.preventDefault();checkStock();}">
-        <button class="btn btn-sm" onclick="checkStock()">Search</button>
+        <button class="btn btn-sm" onclick="checkStock()">搜尋</button>
       </div>
     </div>
-    <p class="muted tip" id="listSum">0 cards</p>
-    <p class="muted tip" style="margin-top:2px">“Delivered” tracks whether you have handed this card to a customer (an offline action) — it is independent of whether the card has been registered. Click “Mark delivered” to record it; you can undo a mistake.</p>
+    <p class="muted tip" id="listSum">共 0 張</p>
+    <p class="muted tip" style="margin-top:2px">「發放」記錄你是否已把這張卡交付給客戶（線下動作），與卡有沒有被註冊無關。點選「標記已發放」即可記錄，點錯了可撤銷。</p>
     <div class="tb-scroll" id="cardTable"></div>
   </div>
 
-  <!-- issue cards -->
+  <!-- 發卡 -->
   <div class="card admin-card">
-    <h3 style="margin:0 0 4px;font-size:15px">⑤ Generate cards</h3>
-    <p class="muted tip" style="margin-bottom:14px">Standard card: sold to teachers, includes 2 classes after sign-up. Co-teacher code: for assistant teachers — they can join someone else's class but cannot create one.</p>
+    <h3 style="margin:0 0 4px;font-size:15px">⑤ 產生卡號</h3>
+    <p class="muted tip" style="margin-bottom:14px">普通啟用卡：賣給老師，註冊後自帶 2 個班級。協同授權碼：給協同老師用，能加入別人的班級、不能建班。</p>
     <div class="row" style="gap:10px;flex-wrap:wrap">
       <select class="inp sel" id="cardType" style="max-width:240px">
-        <option value="owner">Standard card (starts with OWN-)</option>
-        <option value="co">Co-teacher code (starts with CO-)</option>
+        <option value="owner">普通啟用卡（OWN- 開頭）</option>
+        <option value="co">協同授權碼（CO- 開頭）</option>
       </select>
       <input class="inp" id="cardCount" type="number" min="1" max="50" value="5" style="max-width:110px">
-      <span class="muted" style="font-size:13px">cards (1–50)</span>
-      <button class="btn btn-pri" id="genBtn" onclick="genCards()">Generate cards</button>
+      <span class="muted" style="font-size:13px">張（1～50）</span>
+      <button class="btn btn-pri" id="genBtn" onclick="genCards()">產生卡號</button>
     </div>
   </div>
 
-  <!-- result -->
+  <!-- 結果 -->
   <div class="card admin-card hide" id="resultCard">
     <div class="spread" style="margin-bottom:12px">
-      <h3 style="margin:0;font-size:15px">⑥ Generated <span id="resCount">0</span> cards</h3>
+      <h3 style="margin:0;font-size:15px">⑥ 本次產生 <span id="resCount">0</span> 張</h3>
       <div class="row" style="gap:8px">
-        <button class="btn btn-sm" onclick="copyAll()">Copy all</button>
-        <button class="btn btn-sm" onclick="clearResult()">Clear</button>
+        <button class="btn btn-sm" onclick="copyAll()">複製全部</button>
+        <button class="btn btn-sm" onclick="clearResult()">清空</button>
       </div>
     </div>
     <div class="code-grid" id="codeGrid"></div>
-    <p class="muted tip">Send the card to the teacher → they click “Create account” on the <a href="/en/login">sign-in page</a> and enter the card number, username and password. One card registers one account only, and is invalidated once used.</p>
+    <p class="muted tip">把卡號發給老師 → 老師在<a href="/zh-Hant/login">登入頁</a>點「註冊帳號」，填卡號 + 使用者名稱 + 密碼即可。一張卡只能註冊一個帳號，用過即失效。</p>
   </div>
 
 </div>
 
-<script src="/en/common.js"></script>
+<script src="/zh-Hant/common.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 let lastCodes = [];
 
-/* restore the key used earlier in this tab */
+/* 進入頁面時回填本分頁之前用過的口令 */
 const savedKey = sessionStorage.getItem('adminKey');
 if (savedKey) $('adminKey').value = savedKey;
 
 function keyOf() {
   const k = ($('adminKey').value || '').trim();
-  if (!k) { toast('Please enter the card key first', 'err'); return ''; }
+  if (!k) { toast('請先輸入發卡口令', 'err'); return ''; }
   return k;
 }
 
@@ -146,7 +146,7 @@ function toggleKey() {
   const el = $('adminKey');
   const show = el.type === 'password';
   el.type = show ? 'text' : 'password';
-  $('eyeBtn').textContent = show ? 'Hide' : 'Show';
+  $('eyeBtn').textContent = show ? '隱藏' : '顯示';
 }
 
 async function post(url, body) {
@@ -157,7 +157,7 @@ async function post(url, body) {
   });
   let data = {};
   try { data = await res.json(); } catch (e) { /* ignore */ }
-  if (!res.ok) throw new Error((data && data.error) || ('Request failed (' + res.status + ')'));
+  if (!res.ok) throw new Error((data && data.error) || ('請求失敗(' + res.status + ')'));
   return data;
 }
 
@@ -178,7 +178,7 @@ async function checkStock(silent) {
     $('stockCard').classList.remove('hide');
     $('listCard').classList.remove('hide');
     $('reqCard').classList.remove('hide');
-    $('keyTag').textContent = 'Key verified';
+    $('keyTag').textContent = '口令已驗證';
     $('keyTag').className = 'badge badge-ok';
     $('stOwner').textContent = d.unusedOwner;
     $('stCo').textContent = d.unusedCo;
@@ -186,48 +186,48 @@ async function checkStock(silent) {
     $('defaultKeyWarn').classList.toggle('hide', !d.usingDefaultKey);
     renderList(d);
     loadRequests();
-    if (!silent) toast('Key is correct', 'ok');
+    if (!silent) toast('口令正確', 'ok');
   } catch (e) {
-    $('keyTag').textContent = 'Key not verified';
+    $('keyTag').textContent = '口令未驗證';
     $('keyTag').className = 'badge';
     if (!silent) toast(e.message, 'err');
   }
 }
 
-/* card details: delivered (handed to customer, independent of registration) / registration status */
+/* 卡號明細: 發放(是否已交付客戶, 與註冊無關) / 註冊(未使用 / 已註冊綁定到哪個帳號) */
 function renderList(d) {
   const cards = d.cards || [];
   const usedCount = cards.filter((c) => c.status === 'used').length;
   const dvCount = cards.filter((c) => c.delivered).length;
   const kw = ($('q').value || '').trim();
   $('listSum').textContent = kw
-    ? `${cards.length} matched (${dvCount} delivered · ${usedCount} registered)`
-    : `${(d.total || 0)} total · ${(d.delivered || 0)} delivered · ${(d.used || 0)} registered · ${(d.total || 0) - (d.used || 0)} unused`;
+    ? `篩選出 ${cards.length} 張（已發放 ${dvCount} 張 · 已註冊 ${usedCount} 張）`
+    : `全部 ${(d.total || 0)} 張 · 已發放 ${(d.delivered || 0)} 張 · 已註冊 ${(d.used || 0)} 張 · 未使用 ${(d.total || 0) - (d.used || 0)} 張`;
 
   const box = $('cardTable');
   if (!cards.length) {
-    box.innerHTML = '<p class="muted tip">No matching cards</p>';
+    box.innerHTML = '<p class="muted tip">沒有符合的卡號</p>';
     return;
   }
   const rows = cards.map((c) => {
     const isCo = c.type === 'co';
     const used = c.status === 'used';
     const st = used
-      ? '<span class="badge badge-ok">Registered</span>'
-      : '<span class="badge">Unused</span>';
+      ? '<span class="badge badge-ok">已註冊</span>'
+      : '<span class="badge">未使用</span>';
     const dv = c.delivered
-      ? `<span class="badge badge-pri">Delivered</span><br><span class="muted mini">${fmtTime(c.deliveredAt)}</span>`
-      : '<span class="badge badge-warn">Not delivered</span>';
+      ? `<span class="badge badge-pri">已發放</span><br><span class="muted mini">${fmtTime(c.deliveredAt)}</span>`
+      : '<span class="badge badge-warn">未發放</span>';
     const who = used && c.user
-      ? `<b>${esc(c.user.username)}</b><br><span class="muted mini">registered ${fmtTime(c.usedAt)}</span>`
+      ? `<b>${esc(c.user.username)}</b><br><span class="muted mini">${fmtTime(c.usedAt)} 註冊</span>`
       : '<span class="muted">—</span>';
     const dvBtn = c.delivered
-      ? `<button class="btn btn-sm" onclick="deliverCard('${esc(c.id)}', false)">Undo</button>`
-      : `<button class="btn btn-sm btn-pri" onclick="deliverCard('${esc(c.id)}', true)">Mark delivered</button>`;
-    const act = dvBtn + (used ? '' : ` <button class="btn btn-sm" onclick="copyOne('${esc(c.code)}')">Copy</button>`);
+      ? `<button class="btn btn-sm" onclick="deliverCard('${esc(c.id)}', false)">撤銷發放</button>`
+      : `<button class="btn btn-sm btn-pri" onclick="deliverCard('${esc(c.id)}', true)">標記已發放</button>`;
+    const act = dvBtn + (used ? '' : ` <button class="btn btn-sm" onclick="copyOne('${esc(c.code)}')">複製</button>`);
     return `<tr>
       <td class="cd mono">${esc(c.code)}</td>
-      <td><span class="badge ${isCo ? 'badge-pri' : 'badge-ok'} mini">${isCo ? 'Co' : 'Standard'}</span></td>
+      <td><span class="badge ${isCo ? 'badge-pri' : 'badge-ok'} mini">${isCo ? '協同' : '普通'}</span></td>
       <td>${dv}</td>
       <td>${st}</td>
       <td>${who}</td>
@@ -238,48 +238,48 @@ function renderList(d) {
 
   box.innerHTML = `<table class="tb">
     <thead><tr>
-      <th>Card</th><th>Type</th><th>Delivered</th><th>Registration</th><th>Account</th><th>Created</th><th></th>
+      <th>卡號</th><th>類型</th><th>發放</th><th>註冊</th><th>綁定帳號</th><th>產生時間</th><th></th>
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
 }
 
-/* mark whether a card has been handed to a customer (independent of registration, undoable) */
+/* 標記某張卡是否已發放給客戶（與註冊無關，可撤銷） */
 async function deliverCard(id, delivered) {
   const k = keyOf();
   if (!k) return;
   try {
     await post('/api/cards/deliver', { adminKey: k, id, delivered });
-    toast(delivered ? 'Marked as delivered' : 'Delivery mark removed', 'ok');
+    toast(delivered ? '已標記為已發放' : '已撤銷發放標記', 'ok');
     checkStock(true);
   } catch (e) { toast(e.message, 'err'); }
 }
 
-/* ---------- Activation card requests ---------- */
+/* ---------- 啟用卡號申請 ---------- */
 async function loadRequests() {
   const k = keyOf();
   if (!k) return;
   try {
     const d = await post('/api/cards/requests', { adminKey: k });
     $('reqSum').textContent = d.total
-      ? (d.total + ' total · ' + d.pending + ' pending')
-      : 'No requests yet';
+      ? ('共 ' + d.total + ' 筆 · 待處理 ' + d.pending + ' 筆')
+      : '暫無申請';
     const box = $('reqList');
     if (!d.requests.length) {
-      box.innerHTML = '<p class="muted tip">No requests yet. Submissions from the “Request a free activation card” form will show up here.</p>';
+      box.innerHTML = '<p class="muted tip">還沒有人提交申請。落地頁和註冊頁的「申請啟用卡號」表單會彙總到這裡。</p>';
       return;
     }
     const rows = d.requests.map((r) => `<tr>
       <td class="cd mono">${esc(r.contact)}</td>
       <td class="mini" style="white-space:normal;max-width:260px">${esc(r.note || '—')}</td>
-      <td><span class="badge ${r.status === 'pending' ? 'badge-warn' : 'badge-ok'} mini">${r.status === 'pending' ? 'Pending' : 'Done'}</span></td>
+      <td><span class="badge ${r.status === 'pending' ? 'badge-warn' : 'badge-ok'} mini">${r.status === 'pending' ? '待處理' : '已處理'}</span></td>
       <td class="muted mini">${fmtTime(r.createdAt)}</td>
-      <td>${r.status === 'pending' ? `<button class="btn btn-sm" onclick="doneRequest('${r.id}')">Mark as done</button>` : ''}</td>
+      <td>${r.status === 'pending' ? `<button class="btn btn-sm" onclick="doneRequest('${r.id}')">標記已處理</button>` : ''}</td>
     </tr>`).join('');
     box.innerHTML = `<table class="tb"><thead><tr>
-      <th>Contact email</th><th>Notes</th><th>Status</th><th>Submitted</th><th></th>
+      <th>聯絡電子信箱</th><th>說明</th><th>狀態</th><th>提交時間</th><th></th>
     </tr></thead><tbody>${rows}</tbody></table>`;
-  } catch (e) { /* key errors are already reported by checkStock */ }
+  } catch (e) { /* 口令錯誤的狀況已在 checkStock 裡提示 */ }
 }
 
 async function doneRequest(id) {
@@ -287,7 +287,7 @@ async function doneRequest(id) {
   if (!k) return;
   try {
     await post('/api/cards/requests/done', { adminKey: k, id });
-    toast('Marked as done', 'ok');
+    toast('已標記為已處理', 'ok');
     loadRequests();
   } catch (e) { toast(e.message, 'err'); }
 }
@@ -305,8 +305,8 @@ async function genCards() {
     const d = await post('/api/cards/generate', { adminKey: k, type, count });
     sessionStorage.setItem('adminKey', k);
     renderCodes(d.codes || [], type);
-    toast('Generated ' + (d.codes || []).length + ' cards', 'ok');
-    checkStock(true); // refresh stock as well
+    toast('已產生 ' + (d.codes || []).length + ' 張', 'ok');
+    checkStock(true); // 順手重新整理庫存
   } catch (e) {
     toast(e.message, 'err');
   } finally {
@@ -322,19 +322,19 @@ function renderCodes(codes, type) {
   $('codeGrid').innerHTML = codes.map((c) => `
     <div class="code-chip">
       <b class="mono">${esc(c)}</b>
-      <span class="badge ${isCo ? 'badge-pri' : 'badge-ok'}" style="font-size:11px">${isCo ? 'Co' : 'Standard'}</span>
-      <button class="btn btn-sm" onclick="copyOne('${esc(c)}')">Copy</button>
+      <span class="badge ${isCo ? 'badge-pri' : 'badge-ok'}" style="font-size:11px">${isCo ? '協同' : '普通'}</span>
+      <button class="btn btn-sm" onclick="copyOne('${esc(c)}')">複製</button>
     </div>`).join('');
 }
 
 async function copyOne(code) {
-  toast((await copyText(code)) ? 'Copied ' + code : 'Please copy manually', 'ok');
+  toast((await copyText(code)) ? '已複製 ' + code : '請手動複製', 'ok');
 }
 
 async function copyAll() {
-  if (!lastCodes.length) return toast('No generated cards yet', 'err');
+  if (!lastCodes.length) return toast('還沒有產生的卡號', 'err');
   const ok = await copyText(lastCodes.join('\n'));
-  toast(ok ? 'Copied all ' + lastCodes.length + ' cards' : 'Please select and copy manually', ok ? 'ok' : 'err');
+  toast(ok ? '已複製全部 ' + lastCodes.length + ' 個卡號' : '請手動選取複製', ok ? 'ok' : 'err');
 }
 
 function clearResult() {
