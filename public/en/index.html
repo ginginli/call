@@ -1,81 +1,78 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>班级喊话系统 · 登录</title>
+<title>Class Broadcast System · Sign in</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<div class="language-list floating">
-  <a class="curr" href="/" title="中文">中文</a>
-  <a href="/en/" title="English">English</a>
-</div>
+<a class="btn btn-sm" href="/" style="position:fixed;top:14px;right:16px;z-index:50">中文</a>
 <div class="auth-bg">
   <div class="auth-box">
     <div class="brand">
       <div class="logo">📢</div>
       <div>
-        <h1>班级喊话系统</h1>
-        <p>网页发通知 · 教室自动全屏播报</p>
+        <h1>Class Broadcast System</h1>
+        <p>Send from any browser · Plays full-screen in the classroom</p>
       </div>
     </div>
 
     <div class="card">
       <div class="tabs">
-        <button id="tabLogin" class="on" onclick="showTab('login')">登录</button>
-        <button id="tabReg" onclick="showTab('reg')">注册账号</button>
-        <button id="tabForgot" onclick="showTab('forgot')">忘记密码</button>
+        <button id="tabLogin" class="on" onclick="showTab('login')">Sign in</button>
+        <button id="tabReg" onclick="showTab('reg')">Create account</button>
+        <button id="tabForgot" onclick="showTab('forgot')">Forgot password</button>
       </div>
 
-      <!-- 登录 -->
+      <!-- Sign in -->
       <form class="auth-pane" id="paneLogin" onsubmit="return doLogin(event)">
-        <h2>登录后台</h2>
-        <label class="lbl">用户名</label>
+        <h2>Sign in to the console</h2>
+        <label class="lbl">Username</label>
         <input class="inp" id="liUser" autocomplete="username" required>
-        <label class="lbl">密码</label>
+        <label class="lbl">Password</label>
         <input class="inp" id="liPass" type="password" autocomplete="current-password" required>
         <div style="height:18px"></div>
-        <button class="btn btn-pri btn-block" type="submit">登 录</button>
+        <button class="btn btn-pri btn-block" type="submit">Sign in</button>
       </form>
 
-      <!-- 注册 -->
+      <!-- Create account -->
       <form class="auth-pane hide" id="paneReg" onsubmit="return doReg(event)">
-        <h2>注册账号</h2>
-        <p class="sub">第一次使用需激活卡号，注册成功自动进入后台</p>
-        <label class="lbl">激活卡号</label>
-        <input class="inp mono" id="rgCard" placeholder="例如 OWN-XXXX-XXXX" style="letter-spacing:1px">
-        <label class="lbl">登录用户名（请牢记，找回密码需用到）</label>
+        <h2>Create account</h2>
+        <p class="sub">A card number is required for your first sign-up. You go straight into the console afterwards.</p>
+        <label class="lbl">Card number</label>
+        <input class="inp mono" id="rgCard" placeholder="e.g. OWN-XXXX-XXXX" style="letter-spacing:1px">
+        <label class="lbl">Username (keep it safe — you need it to reset your password)</label>
         <input class="inp" id="rgUser" maxlength="20" required>
-        <label class="lbl">密码(至少 6 位)</label>
+        <label class="lbl">Password (at least 6 characters)</label>
         <input class="inp" id="rgPass" type="password" required>
-        <label class="lbl">确认密码</label>
+        <label class="lbl">Confirm password</label>
         <input class="inp" id="rgPass2" type="password" required>
-        <label class="lbl">班级邀请码（选填 · 协同老师填写）</label>
-        <input class="inp mono" id="rgInvite" placeholder="班主任给你的邀请码" maxlength="12" style="text-transform:uppercase;letter-spacing:2px">
+        <label class="lbl">Class invite code (optional · for co-teachers)</label>
+        <input class="inp mono" id="rgInvite" placeholder="Invite code given by the class owner" maxlength="12" style="text-transform:uppercase;letter-spacing:2px">
         <div style="height:18px"></div>
-        <button class="btn btn-pri btn-block" type="submit">立即注册</button>
-        <p class="sub" style="margin:12px 0 0;line-height:1.6" id="rgTip">普通激活卡注册后自带 2 个班级；协同授权码（CO- 开头）注册的是协同账号，不能新建班级</p>
+        <button class="btn btn-pri btn-block" type="submit">Create account</button>
+        <p class="sub" style="margin:12px 0 0;line-height:1.6" id="rgTip">A standard card includes 2 classes after sign-up. A co-teacher code (starting with CO-) creates a co-teacher account, which cannot create classes.</p>
       </form>
 
-      <!-- 忘记密码 -->
+      <!-- Forgot password -->
       <form class="auth-pane hide" id="paneForgot" onsubmit="return doForgot(event)">
-        <h2>找回密码</h2>
-        <p class="sub">输入用户名 + 注册时使用的激活卡号</p>
-        <label class="lbl">用户名</label>
+        <h2>Reset password</h2>
+        <p class="sub">Enter your username and the card number used at sign-up</p>
+        <label class="lbl">Username</label>
         <input class="inp" id="foUser" required>
-        <label class="lbl">激活卡号</label>
-        <input class="inp mono" id="foCard" placeholder="例如 OWN-XXXX-XXXX">
-        <label class="lbl">新密码(至少 6 位)</label>
+        <label class="lbl">Card number</label>
+        <input class="inp mono" id="foCard" placeholder="e.g. OWN-XXXX-XXXX">
+        <label class="lbl">New password (at least 6 characters)</label>
         <input class="inp" id="foPass" type="password" required>
         <div style="height:18px"></div>
-        <button class="btn btn-pri btn-block" type="submit">重置密码</button>
+        <button class="btn btn-pri btn-block" type="submit">Reset password</button>
       </form>
     </div>
   </div>
 </div>
 
-<script src="/common.js"></script>
+<script src="/en/common.js"></script>
 <script>
 function showTab(t) {
   ['login', 'reg', 'forgot'].forEach((k) => {
@@ -90,7 +87,7 @@ async function doLogin(e) {
   btn.disabled = true;
   try {
     await api('POST', '/api/auth/login', { username: liUser.value.trim(), password: liPass.value });
-    location.href = '/app';
+    location.href = '/en/app';
   } catch (err) {
     toast(err.message, 'err'); btn.disabled = false;
   }
@@ -98,8 +95,8 @@ async function doLogin(e) {
 
 async function doReg(e) {
   e.preventDefault();
-  if (rgPass.value.length < 6) return toast('密码至少 6 位', 'err');
-  if (rgPass.value !== rgPass2.value) return toast('两次输入的密码不一致', 'err');
+  if (rgPass.value.length < 6) return toast('Password must be at least 6 characters', 'err');
+  if (rgPass.value !== rgPass2.value) return toast('The two passwords do not match', 'err');
   const btn = e.target.querySelector('button[type=submit]');
   btn.disabled = true;
   try {
@@ -107,36 +104,34 @@ async function doReg(e) {
       username: rgUser.value.trim(), password: rgPass.value, cardCode: rgCard.value.trim(),
     });
     await joinByInviteCode((rgInvite.value || '').trim().toUpperCase());
-    location.href = '/app';
+    location.href = '/en/app';
   } catch (err) {
     toast(err.message, 'err'); btn.disabled = false;
   }
 }
 
-/* 注册时填了邀请码 → 自动加入对应班级 */
+/* Invite code entered at sign-up → join that class automatically */
 async function joinByInviteCode(code) {
   if (!code) return;
   try {
     const r = await api('POST', '/api/invite-code/accept', { code });
-    toast(r.already ? '你已在该班级中' : '已加入班级「' + (r.className || '') + '」', 'ok');
+    toast(r.already ? 'You are already in this class' : 'Joined class "' + (r.className || '') + '"', 'ok');
   } catch (e) { toast(e.message, 'err'); }
 }
 
 async function doForgot(e) {
   e.preventDefault();
-  if (foPass.value.length < 6) return toast('新密码至少 6 位', 'err');
+  if (foPass.value.length < 6) return toast('New password must be at least 6 characters', 'err');
   const btn = e.target.querySelector('button[type=submit]');
   btn.disabled = true;
   try {
     await api('POST', '/api/auth/forgot', { username: foUser.value.trim(), cardCode: foCard.value.trim(), password: foPass.value });
-    toast('密码已重置, 请重新登录', 'ok');
+    toast('Password reset. Please sign in again.', 'ok');
     showTab('login');
   } catch (err) {
     toast(err.message, 'err');
   } finally { btn.disabled = false; }
 }
-
-
 </script>
 </body>
 </html>

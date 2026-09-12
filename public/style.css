@@ -231,3 +231,13 @@ a { color: var(--pri); text-decoration: none; }
 .sw.on { border-color: #1f2430; box-shadow: 0 0 0 2px #fff inset; }
 .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
 .empty-state .big { font-size: 44px; }
+
+/* ---------- 语言切换 ---------- */
+.language-list { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; }
+.language-list a { color: #6b7280; text-decoration: none; padding: 3px 9px; border-radius: 8px; white-space: nowrap; }
+.language-list a:hover { color: #247a8c; }
+.language-list a.curr { color: #111827; font-weight: 700; background: #eef1f7; }
+.language-list.floating { position: fixed; top: 14px; right: 16px; z-index: 60; background: #fff; padding: 4px 6px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+.language-list.on-dark a { color: rgba(255,255,255,.65); }
+.language-list.on-dark a:hover { color: #fff; }
+.language-list.on-dark a.curr { color: #fff; background: rgba(255,255,255,.16); }

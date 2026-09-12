@@ -165,12 +165,20 @@ function classJSON(c, uid) {
 /* ---------------- App ---------------- */
 const app = express();
 app.use(express.json({ limit: '200kb' }));
-app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
 app.get('/app', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'app.html')));
 app.get('/room', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'room.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'admin.html')));
+
+/* 英文站点 (public/en/) */
+app.get('/en', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'en', 'index.html')));
+app.get('/en/app', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'en', 'app.html')));
+app.get('/en/room', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'en', 'room.html')));
+app.get('/en/admin', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'en', 'admin.html')));
+
+/* 静态资源: 放在页面路由之后, 避免 /en 被目录形式重定向成 301 */
+app.use(express.static(path.join(__dirname, '..', 'public')));
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 /* ---- 认证 ---- */
