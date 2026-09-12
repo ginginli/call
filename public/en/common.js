@@ -10,7 +10,7 @@ async function api(method, url, body) {
   try { data = await res.json(); } catch (e) { /* ignore */ }
   if (!res.ok) {
     if (res.status === 401 && !/\/auth\//.test(url)) {
-      location.href = '/en/';
+      location.href = '/en/login';
       throw new Error('Not signed in');
     }
     throw new Error((data && data.error) || ('Request failed (' + res.status + ')'));

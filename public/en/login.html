@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sign in · Class Broadcast System</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="language-list floating">
+  <a href="/login" title="中文">中文</a>
+  <a class="curr" href="/en/login" title="English">English</a>
+</div>
+<div class="auth-bg">
+  <div class="auth-box">
+    <a class="back-home" href="/en/">← Back to home</a>
+    <div class="brand">
+      <div class="logo">📢</div>
+      <div>
+        <h1>Class Broadcast System</h1>
+        <p>Send from any browser · Plays full-screen in the classroom</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tabs">
+        <button id="tabLogin" class="on" onclick="showTab('login')">Sign in</button>
+        <button id="tabReg" onclick="showTab('reg')">Create account</button>
+        <button id="tabForgot" onclick="showTab('forgot')">Forgot password</button>
+      </div>
+
+      <!-- Sign in -->
+      <form class="auth-pane" id="paneLogin" onsubmit="return doLogin(event)">
+        <h2>Sign in to the console</h2>
+        <label class="lbl">Username</label>
+        <input class="inp" id="liUser" autocomplete="username" required>
+        <label class="lbl">Password</label>
+        <input class="inp" id="liPass" type="password" autocomplete="current-password" required>
+        <div style="height:18px"></div>
+        <button class="btn btn-pri btn-block" type="submit">Sign in</button>
+      </form>
+
+      <!-- Create account -->
+      <form class="auth-pane hide" id="paneReg" onsubmit="return doReg(event)">
+        <h2>Create account</h2>
+        <p class="sub">A card number is required for your first sign-up. You go straight into the console afterwards.</p>
+        <label class="lbl">Card number</label>
+        <input class="inp mono" id="rgCard" placeholder="e.g. OWN-XXXX-XXXX" style="letter-spacing:1px">
+        <label class="lbl">Username (keep it safe — you need it to reset your password)</label>
+        <input class="inp" id="rgUser" maxlength="20" required>
+        <label class="lbl">Password (at least 6 characters)</label>
+        <input class="inp" id="rgPass" type="password" required>
+        <label class="lbl">Confirm password</label>
+        <input class="inp" id="rgPass2" type="password" required>
+        <label class="lbl">Class invite code (optional · for co-teachers)</label>
+        <input class="inp mono" id="rgInvite" placeholder="Invite code given by the class owner" maxlength="12" style="text-transform:uppercase;letter-spacing:2px">
+        <div style="height:18px"></div>
+        <button class="btn btn-pri btn-block" type="submit">Create account</button>
+        <p class="sub" style="margin:12px 0 0;line-height:1.6" id="rgTip">A standard card includes 2 classes after sign-up. A co-teacher code (starting with CO-) creates a co-teacher account, which cannot create classes.</p>
+
+        <!-- Request a card -->
+        <div class="req-box" id="reqBox">
+          <div class="req-h">Don't have a card number yet?</div>
+          <p class="req-p">
+            Enter your contact email below and we will send you an activation card. You can also email your request to
+            <b class="mono" id="reqMail">ladyiney25@gmail.com</b>
+            <button class="btn btn-sm" type="button" onclick="copyReqMail()">Copy</button>
+          </p>
+          <input class="inp" id="reqContact" type="email" placeholder="Your contact email, e.g. teacher@example.com"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();submitCardRequest();}">
+          <textarea class="inp" id="reqNote" rows="2" maxlength="200" placeholder="Anything we should know (optional)"
+                    style="margin-top:8px" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitCardRequest();}"></textarea>
+          <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
+            <button class="btn btn-pri btn-sm" type="button" id="reqBtn" onclick="submitCardRequest()">Submit request</button>
+            <button class="btn btn-sm" type="button" onclick="mailtoCardRequest()">📧 Send by email instead</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Forgot password -->
+      <form class="auth-pane hide" id="paneForgot" onsubmit="return doForgot(event)">
+        <h2>Reset password</h2>
+        <p class="sub">Enter your username and the card number used at sign-up</p>
+        <label class="lbl">Username</label>
+        <input class="inp" id="foUser" required>
+        <label class="lbl">Card number</label>
+        <input class="inp mono" id="foCard" placeholder="e.g. OWN-XXXX-XXXX">
+        <label class="lbl">New password (at least 6 characters)</label>
+        <input class="inp" id="foPass" type="password" required>
+        <div style="height:18px"></div>
+        <button class="btn btn-pri btn-block" type="submit">Reset password</button>
+        <p class="sub" style="margin:12px 0 0;line-height:1.6">Lost the card number too? Email <b>ladyiney25@gmail.com</b> and we will help you out.</p>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="/en/common.js"></script>
+<script>
+const REQ_EMAIL = 'ladyiney25@gmail.com';
+
+function showTab(t) {
+  ['login', 'reg', 'forgot'].forEach((k) => {
+    document.getElementById('pane' + k[0].toUpperCase() + k.slice(1)).classList.toggle('hide', k !== t);
+    document.getElementById('tab' + k[0].toUpperCase() + k.slice(1)).classList.toggle('on', k === t);
+  });
+}
+
+async function doLogin(e) {
+  e.preventDefault();
+  const btn = e.target.querySelector('button[type=submit]');
+  btn.disabled = true;
+  try {
+    await api('POST', '/api/auth/login', { username: liUser.value.trim(), password: liPass.value });
+    location.href = '/en/app';
+  } catch (err) {
+    toast(err.message, 'err'); btn.disabled = false;
+  }
+}
+
+async function doReg(e) {
+  e.preventDefault();
+  if (rgPass.value.length < 6) return toast('Password must be at least 6 characters', 'err');
+  if (rgPass.value !== rgPass2.value) return toast('The two passwords do not match', 'err');
+  const btn = e.target.querySelector('button[type=submit]');
+  btn.disabled = true;
+  try {
+    await api('POST', '/api/auth/register', {
+      username: rgUser.value.trim(), password: rgPass.value, cardCode: rgCard.value.trim(),
+    });
+    await joinByInviteCode((rgInvite.value || '').trim().toUpperCase());
+    location.href = '/en/app';
+  } catch (err) {
+    toast(err.message, 'err'); btn.disabled = false;
+  }
+}
+
+/* Invite code entered at sign-up → join that class automatically */
+async function joinByInviteCode(code) {
+  if (!code) return;
+  try {
+    const r = await api('POST', '/api/invite-code/accept', { code });
+    toast(r.already ? 'You are already in this class' : 'Joined class "' + (r.className || '') + '"', 'ok');
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function doForgot(e) {
+  e.preventDefault();
+  if (foPass.value.length < 6) return toast('New password must be at least 6 characters', 'err');
+  const btn = e.target.querySelector('button[type=submit]');
+  btn.disabled = true;
+  try {
+    await api('POST', '/api/auth/forgot', { username: foUser.value.trim(), cardCode: foCard.value.trim(), password: foPass.value });
+    toast('Password reset. Please sign in again.', 'ok');
+    showTab('login');
+  } catch (err) {
+    toast(err.message, 'err');
+  } finally { btn.disabled = false; }
+}
+
+/* ---------- Request an activation card ---------- */
+function reqPayload() {
+  return {
+    contact: (document.getElementById('reqContact').value || '').trim(),
+    note: (document.getElementById('reqNote').value || '').trim(),
+    lang: 'en',
+  };
+}
+
+async function submitCardRequest() {
+  const p = reqPayload();
+  if (p.contact.length < 3) return toast('Please enter your contact email', 'err');
+  const btn = document.getElementById('reqBtn');
+  btn.disabled = true;
+  try {
+    await api('POST', '/api/card-request', p);
+    toast('Request received — we will get back to you within 1 business day', 'ok');
+    toast('You can also email ' + REQ_EMAIL, 'ok');
+    document.getElementById('reqNote').value = '';
+  } catch (err) {
+    toast(err.message, 'err');
+  } finally { btn.disabled = false; }
+}
+
+function mailtoCardRequest() {
+  const p = reqPayload();
+  const subject = 'Activation card request (Class Broadcast System)';
+  const body = [
+    'Hello, I would like to request an activation card for the Class Broadcast System.',
+    '',
+    'Contact email: ' + (p.contact || '(please fill in)'),
+    'Notes: ' + (p.note || '(none)'),
+  ].join('\n');
+  location.href = 'mailto:' + REQ_EMAIL
+    + '?subject=' + encodeURIComponent(subject)
+    + '&body=' + encodeURIComponent(body);
+}
+
+async function copyReqMail() {
+  const ok = await copyText(REQ_EMAIL);
+  toast(ok ? 'Email copied: ' + REQ_EMAIL : 'Please copy manually: ' + REQ_EMAIL, ok ? 'ok' : 'err');
+}
+
+/* Arriving from the landing page with #reg / #card jumps straight to the right place */
+(function applyHash() {
+  const h = (location.hash || '').toLowerCase();
+  if (h !== '#reg' && h !== '#card') return;
+  showTab('reg');
+  if (h === '#card') {
+    setTimeout(() => {
+      const box = document.getElementById('reqBox');
+      if (!box) return;
+      box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      box.classList.add('hl');
+    }, 120);
+  }
+})();
+</script>
+</body>
+</html>

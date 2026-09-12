@@ -36,7 +36,7 @@
       <a class="curr" href="/admin" title="中文">中文</a>
       <a href="/en/admin" title="English">English</a>
     </span>
-    <a class="btn btn-sm" href="/">返回登录页</a>
+    <a class="btn btn-sm" href="/login">返回登录页</a>
   </div>
 </header>
 
@@ -69,10 +69,21 @@
     </div>
   </div>
 
+  <!-- 激活卡号申请 -->
+  <div class="card admin-card hide" id="reqCard">
+    <div class="spread">
+      <h3 style="margin:0;font-size:15px">③ 激活卡号申请</h3>
+      <button class="btn btn-sm" onclick="loadRequests()">刷新</button>
+    </div>
+    <p class="muted tip" id="reqSum">暂无申请</p>
+    <p class="muted tip" style="margin-top:2px">申请来自落地页与注册页的「申请激活卡号」表单。请按联系方式回访并发卡；老师也可以直接发邮件到 <b class="mono">ladyiney25@gmail.com</b>。</p>
+    <div class="tb-scroll" id="reqList"></div>
+  </div>
+
   <!-- 卡号明细: 卡密 ↔ 注册状态 -->
   <div class="card admin-card hide" id="listCard">
     <div class="spread" style="gap:10px;flex-wrap:wrap">
-      <h3 style="margin:0;font-size:15px">③ 卡号明细（卡密 ↔ 注册状态）</h3>
+      <h3 style="margin:0;font-size:15px">④ 卡号明细（卡密 ↔ 注册状态）</h3>
       <div class="row" style="gap:8px">
         <input class="inp" id="q" placeholder="搜卡号 / 用户名" style="max-width:200px"
                onkeydown="if(event.key==='Enter'){event.preventDefault();checkStock();}">
@@ -85,7 +96,7 @@
 
   <!-- 发卡 -->
   <div class="card admin-card">
-    <h3 style="margin:0 0 4px;font-size:15px">④ 生成卡号</h3>
+    <h3 style="margin:0 0 4px;font-size:15px">⑤ 生成卡号</h3>
     <p class="muted tip" style="margin-bottom:14px">普通激活卡：卖给老师，注册后自带 2 个班级。协同授权码：给协同老师用，能加入别人的班级、不能建班。</p>
     <div class="row" style="gap:10px;flex-wrap:wrap">
       <select class="inp sel" id="cardType" style="max-width:240px">
@@ -101,14 +112,14 @@
   <!-- 结果 -->
   <div class="card admin-card hide" id="resultCard">
     <div class="spread" style="margin-bottom:12px">
-      <h3 style="margin:0;font-size:15px">⑤ 本次生成 <span id="resCount">0</span> 张</h3>
+      <h3 style="margin:0;font-size:15px">⑥ 本次生成 <span id="resCount">0</span> 张</h3>
       <div class="row" style="gap:8px">
         <button class="btn btn-sm" onclick="copyAll()">复制全部</button>
         <button class="btn btn-sm" onclick="clearResult()">清空</button>
       </div>
     </div>
     <div class="code-grid" id="codeGrid"></div>
-    <p class="muted tip">把卡号发给老师 → 老师在<a href="/">登录页</a>点「注册账号」，填卡号 + 用户名 + 密码即可。一张卡只能注册一个账号，用过即失效。</p>
+    <p class="muted tip">把卡号发给老师 → 老师在<a href="/login">登录页</a>点「注册账号」，填卡号 + 用户名 + 密码即可。一张卡只能注册一个账号，用过即失效。</p>
   </div>
 
 </div>
@@ -163,6 +174,7 @@ async function checkStock(silent) {
     sessionStorage.setItem('adminKey', k);
     $('stockCard').classList.remove('hide');
     $('listCard').classList.remove('hide');
+    $('reqCard').classList.remove('hide');
     $('keyTag').textContent = '口令已验证';
     $('keyTag').className = 'badge badge-ok';
     $('stOwner').textContent = d.unusedOwner;
@@ -170,6 +182,7 @@ async function checkStock(silent) {
     $('stUsed').textContent = d.used;
     $('defaultKeyWarn').classList.toggle('hide', !d.usingDefaultKey);
     renderList(d);
+    loadRequests();
     if (!silent) toast('口令正确', 'ok');
   } catch (e) {
     $('keyTag').textContent = '口令未验证';
@@ -218,6 +231,43 @@ function renderList(d) {
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
+}
+
+/* ---------- 激活卡号申请 ---------- */
+async function loadRequests() {
+  const k = keyOf();
+  if (!k) return;
+  try {
+    const d = await post('/api/cards/requests', { adminKey: k });
+    $('reqSum').textContent = d.total
+      ? ('共 ' + d.total + ' 条 · 待处理 ' + d.pending + ' 条')
+      : '暂无申请';
+    const box = $('reqList');
+    if (!d.requests.length) {
+      box.innerHTML = '<p class="muted tip">还没有人提交申请。落地页和注册页的「申请激活卡号」表单会汇总到这里。</p>';
+      return;
+    }
+    const rows = d.requests.map((r) => `<tr>
+      <td class="cd mono">${esc(r.contact)}</td>
+      <td class="mini" style="white-space:normal;max-width:260px">${esc(r.note || '—')}</td>
+      <td><span class="badge ${r.status === 'pending' ? 'badge-warn' : 'badge-ok'} mini">${r.status === 'pending' ? '待处理' : '已处理'}</span></td>
+      <td class="muted mini">${fmtTime(r.createdAt)}</td>
+      <td>${r.status === 'pending' ? `<button class="btn btn-sm" onclick="doneRequest('${r.id}')">标记已处理</button>` : ''}</td>
+    </tr>`).join('');
+    box.innerHTML = `<table class="tb"><thead><tr>
+      <th>联系邮箱</th><th>说明</th><th>状态</th><th>提交时间</th><th></th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+  } catch (e) { /* 口令错误的情况已在 checkStock 里提示 */ }
+}
+
+async function doneRequest(id) {
+  const k = keyOf();
+  if (!k) return;
+  try {
+    await post('/api/cards/requests/done', { adminKey: k, id });
+    toast('已标记为已处理', 'ok');
+    loadRequests();
+  } catch (e) { toast(e.message, 'err'); }
 }
 
 async function genCards() {

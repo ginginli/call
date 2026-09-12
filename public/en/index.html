@@ -3,134 +3,475 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Class Broadcast System · Sign in</title>
+<title>Class Broadcast System · Send from a browser, play full-screen in class</title>
+<meta name="description" content="Type a notice from your office or phone and it pops up full-screen on the classroom computer with voice. No app to install, no student devices — just a bind code. Request a free activation card.">
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/landing.css">
 </head>
-<body>
-<a class="btn btn-sm" href="/" style="position:fixed;top:14px;right:16px;z-index:50">中文</a>
-<div class="auth-bg">
-  <div class="auth-box">
-    <div class="brand">
-      <div class="logo">📢</div>
-      <div>
-        <h1>Class Broadcast System</h1>
-        <p>Send from any browser · Plays full-screen in the classroom</p>
-      </div>
-    </div>
+<body class="lp">
 
-    <div class="card">
-      <div class="tabs">
-        <button id="tabLogin" class="on" onclick="showTab('login')">Sign in</button>
-        <button id="tabReg" onclick="showTab('reg')">Create account</button>
-        <button id="tabForgot" onclick="showTab('forgot')">Forgot password</button>
-      </div>
-
-      <!-- Sign in -->
-      <form class="auth-pane" id="paneLogin" onsubmit="return doLogin(event)">
-        <h2>Sign in to the console</h2>
-        <label class="lbl">Username</label>
-        <input class="inp" id="liUser" autocomplete="username" required>
-        <label class="lbl">Password</label>
-        <input class="inp" id="liPass" type="password" autocomplete="current-password" required>
-        <div style="height:18px"></div>
-        <button class="btn btn-pri btn-block" type="submit">Sign in</button>
-      </form>
-
-      <!-- Create account -->
-      <form class="auth-pane hide" id="paneReg" onsubmit="return doReg(event)">
-        <h2>Create account</h2>
-        <p class="sub">A card number is required for your first sign-up. You go straight into the console afterwards.</p>
-        <label class="lbl">Card number</label>
-        <input class="inp mono" id="rgCard" placeholder="e.g. OWN-XXXX-XXXX" style="letter-spacing:1px">
-        <label class="lbl">Username (keep it safe — you need it to reset your password)</label>
-        <input class="inp" id="rgUser" maxlength="20" required>
-        <label class="lbl">Password (at least 6 characters)</label>
-        <input class="inp" id="rgPass" type="password" required>
-        <label class="lbl">Confirm password</label>
-        <input class="inp" id="rgPass2" type="password" required>
-        <label class="lbl">Class invite code (optional · for co-teachers)</label>
-        <input class="inp mono" id="rgInvite" placeholder="Invite code given by the class owner" maxlength="12" style="text-transform:uppercase;letter-spacing:2px">
-        <div style="height:18px"></div>
-        <button class="btn btn-pri btn-block" type="submit">Create account</button>
-        <p class="sub" style="margin:12px 0 0;line-height:1.6" id="rgTip">A standard card includes 2 classes after sign-up. A co-teacher code (starting with CO-) creates a co-teacher account, which cannot create classes.</p>
-      </form>
-
-      <!-- Forgot password -->
-      <form class="auth-pane hide" id="paneForgot" onsubmit="return doForgot(event)">
-        <h2>Reset password</h2>
-        <p class="sub">Enter your username and the card number used at sign-up</p>
-        <label class="lbl">Username</label>
-        <input class="inp" id="foUser" required>
-        <label class="lbl">Card number</label>
-        <input class="inp mono" id="foCard" placeholder="e.g. OWN-XXXX-XXXX">
-        <label class="lbl">New password (at least 6 characters)</label>
-        <input class="inp" id="foPass" type="password" required>
-        <div style="height:18px"></div>
-        <button class="btn btn-pri btn-block" type="submit">Reset password</button>
-      </form>
+<!-- Top nav -->
+<header class="lp-nav">
+  <div class="lp-wrap lp-nav-in">
+    <a class="lp-logo" href="/en/">
+      <span class="lp-logo-ico">📢</span>
+      <span>Class Broadcast System</span>
+    </a>
+    <nav class="lp-links">
+      <a href="#features">Features</a>
+      <a href="#what">What is it</a>
+      <a href="#how">How it works</a>
+      <a href="#why">Why us</a>
+      <a href="#faq">FAQ</a>
+      <a href="#price">Cards</a>
+    </nav>
+    <div class="lp-nav-act">
+      <span class="language-list">
+        <a href="/" title="中文">中文</a>
+        <a class="curr" href="/en/" title="English">English</a>
+      </span>
+      <a class="btn btn-sm" href="/en/login">Sign in</a>
+      <a class="btn btn-pri btn-sm" href="#card">Get a free card</a>
     </div>
   </div>
-</div>
+</header>
+
+<!-- Hero -->
+<section class="lp-hero">
+  <div class="lp-wrap lp-hero-in">
+    <div class="lp-hero-txt">
+      <span class="lp-pill">Send from a browser · Full-screen in class</span>
+      <h1>Don't walk to the classroom —<br><em>one message, whole class reached</em></h1>
+      <p class="lp-lead">
+        Type a sentence on your laptop or phone and the classroom screen instantly goes full-screen
+        with voice reading it out. No app to install, no devices for students — one computer on the
+        internet is enough.
+      </p>
+      <div class="lp-cta">
+        <a class="btn btn-pri lp-btn-lg" href="#card">Get a free activation card</a>
+        <a class="btn lp-btn-lg" href="/en/login">I already have an account</a>
+      </div>
+      <p class="lp-cta-note">
+        How to request: enter your contact email in the <a href="#card">form</a>, or email
+        <b class="mono">ladyiney25@gmail.com</b>. We reply within 1 business day.
+      </p>
+      <ul class="lp-trust">
+        <li>✅ No install</li>
+        <li>✅ Full-screen + voice</li>
+        <li>✅ Scheduled broadcasts</li>
+        <li>✅ Works on mobile</li>
+      </ul>
+    </div>
+
+    <!-- Illustration: teacher console -> classroom display -->
+    <div class="lp-mock" aria-hidden="true">
+
+      <!-- 1. Teacher side -->
+      <div class="lp-mock-console">
+        <div class="lp-mock-bar">
+          <span></span><span></span><span></span>
+          <i>Teacher console · laptop / phone</i>
+          <b>Connected</b>
+        </div>
+        <div class="lp-mock-body">
+          <div class="lp-mock-input">Grade 3 Class 2, please gather at the playground</div>
+          <div class="lp-mock-btn">Send 📢</div>
+        </div>
+      </div>
+
+      <!-- 2. Delivery -->
+      <div class="lp-mock-link"><span>⚡ Delivered instantly</span></div>
+
+      <!-- 3. The classroom: a display mounted on the wall -->
+      <div class="lp-mock-room">
+        <div class="lp-mock-walltag">
+          <span>🏫 Grade 3 Class 2 · Classroom</span>
+          <span class="lp-mock-online"><i></i>Display online</span>
+        </div>
+
+        <div class="lp-mock-tv">
+          <div class="lp-mock-screen">
+            <!-- The notice fills the whole panel = full-screen on the class display -->
+            <div class="lp-mock-ov">
+              <div class="lp-mock-ovhead">
+                <span class="lp-mock-ovtag">📢 Grade 3 Class 2</span>
+                <span class="lp-mock-ovsub">Full-screen on class display</span>
+              </div>
+              <div class="lp-mock-ovtext">Grade 3 Class 2, please<br>gather at the playground</div>
+              <div class="lp-mock-ovfoot">
+                <span class="lp-mock-src">From: Ms. Wang · 14:30</span>
+                <span class="lp-mock-voice">
+                  <span class="lp-mock-wave"><i></i><i></i><i></i><i></i></span>
+                  🔊 Reading aloud…
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="lp-mock-tvbase">
+            <span>◉ CLASS DISPLAY · 65"</span>
+            <span class="lp-mock-led"></span>
+          </div>
+        </div>
+
+        <div class="lp-mock-desks">
+          <span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="lp-sec" id="features">
+  <div class="lp-wrap">
+    <div class="lp-sec-head">
+      <h2>Turn the classroom screen into a talking notice board</h2>
+      <p>Every notice you send pops up full-screen on the classroom computer and is read aloud — without eating into lesson time.</p>
+    </div>
+    <div class="lp-grid">
+      <div class="lp-card">
+        <div class="lp-ico">🖥️</div>
+        <h3>Full-screen pop-up</h3>
+        <p>The notice fills the classroom screen the moment you send it, so even the back row reads it clearly — no more sending a student to pass the word.</p>
+      </div>
+      <div class="lp-card">
+        <div class="lp-ico">🔊</div>
+        <h3>Read aloud automatically</h3>
+        <p>The pop-up speaks the message too. For line-up calls or a room change, students hear it while they are still packing up.</p>
+      </div>
+      <div class="lp-card">
+        <div class="lp-ico">🔗</div>
+        <h3>Connect with a bind code</h3>
+        <p>Open the classroom page on any computer, type the 8-character bind code and you are done. Swap machines freely, no re-configuring.</p>
+      </div>
+      <div class="lp-card">
+        <div class="lp-ico">⏰</div>
+        <h3>Scheduled &amp; daily notices</h3>
+        <p>Queue a notice ahead of time and it fires on its own — a 8:00 reading reminder, a Monday assembly call, every week.</p>
+      </div>
+      <div class="lp-card">
+        <div class="lp-ico">👥</div>
+        <h3>Co-teachers welcome</h3>
+        <p>The class owner generates an invite code. Subject teachers join with a co-teacher code and can send notices right away.</p>
+      </div>
+      <div class="lp-card">
+        <div class="lp-ico">🧾</div>
+        <h3>A clear history log</h3>
+        <p>The latest 10 notices are kept: who sent it, when it went out and whether the classroom actually received it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- What is it -->
+<section class="lp-sec lp-sec-alt" id="what">
+  <div class="lp-wrap">
+    <div class="lp-sec-head">
+      <h2>What is the Class Broadcast System?</h2>
+      <p>In one line: it turns the computer in your classroom into a notice board that speaks.</p>
+    </div>
+    <div class="lp-what">
+      <div class="lp-what-txt">
+        <p>
+          It is a web tool for schools. From any laptop or phone with internet access, open the teacher
+          console in a browser, type a sentence and hit send. The computer in the classroom instantly
+          shows the notice full-screen and reads it out loud.
+        </p>
+        <p>
+          Students need no phones or tablets, and there is nothing to install. Open the classroom page on
+          the class computer and enter the 8-character bind code — that is the pairing done. After that,
+          teachers can reach the whole class without leaving the office.
+        </p>
+      </div>
+      <ul class="lp-what-list">
+        <li>
+          <b>Teacher console (web page)</b>
+          <span>Opens in any browser on a phone or office computer — send notices, check the history.</span>
+        </li>
+        <li>
+          <b>Classroom page (class computer)</b>
+          <span>One page kept open on the classroom computer; it shows the pop-up and speaks the notice.</span>
+        </li>
+        <li>
+          <b>Server</b>
+          <span>The relay between the two: accounts, classes, bind codes and notice delivery.</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section class="lp-sec" id="how">
+  <div class="lp-wrap">
+    <div class="lp-sec-head">
+      <h2>Up and running in four steps</h2>
+      <p>From requesting a card to your first broadcast usually takes under ten minutes.</p>
+    </div>
+    <ol class="lp-steps">
+      <li>
+        <span class="lp-step-n">1</span>
+        <h3>Request an activation card</h3>
+        <p><a href="#card">Submit the form</a> with your contact email, or email <b class="mono">ladyiney25@gmail.com</b>.</p>
+      </li>
+      <li>
+        <span class="lp-step-n">2</span>
+        <h3>Create your account</h3>
+        <p>On the <a href="/en/login#reg">sign-up page</a>, enter the card number, a username and a password. You land straight in the console.</p>
+      </li>
+      <li>
+        <span class="lp-step-n">3</span>
+        <h3>Create a class, get a bind code</h3>
+        <p>Add a class in the console and the system gives you an 8-character bind code for that classroom computer.</p>
+      </li>
+      <li>
+        <span class="lp-step-n">4</span>
+        <h3>Bind the classroom and start</h3>
+        <p>Open the <a href="/en/room">classroom page</a> on the class computer, enter the code, and every notice after that goes full-screen.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- Why us -->
+<section class="lp-sec lp-sec-alt" id="why">
+  <div class="lp-wrap">
+    <div class="lp-sec-head">
+      <h2>Why choose the Class Broadcast System</h2>
+      <p>A notice has to get through, be seen, be heard and be on record. Here is how it compares.</p>
+    </div>
+    <div class="lp-cmp-wrap">
+      <table class="lp-cmp">
+        <thead>
+          <tr>
+            <th>What matters</th>
+            <th class="lp-cmp-us">Class Broadcast System</th>
+            <th>WeChat / chat group message</th>
+            <th>PA system / walking to each room</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Walking to the classroom</td>
+            <td class="lp-cmp-us">Not needed — send from your desk</td>
+            <td>Not needed</td>
+            <td>Needed, or a trip to the PA room</td>
+          </tr>
+          <tr>
+            <td>Students need phones</td>
+            <td class="lp-cmp-us">No — the class computer is enough</td>
+            <td>Someone has to be watching</td>
+            <td>No</td>
+          </tr>
+          <tr>
+            <td>Can the back row read it?</td>
+            <td class="lp-cmp-us">Full-screen, large type</td>
+            <td>Gets buried in the chat</td>
+            <td>Yes, if people are in the room</td>
+          </tr>
+          <tr>
+            <td>Read aloud automatically</td>
+            <td class="lp-cmp-us">Voice reads every notice</td>
+            <td>No</td>
+            <td>Only if someone speaks</td>
+          </tr>
+          <tr>
+            <td>Scheduled broadcasts</td>
+            <td class="lp-cmp-us">Yes — e.g. every day at 8:00</td>
+            <td>No</td>
+            <td>No</td>
+          </tr>
+          <tr>
+            <td>Who sent it, was it delivered?</td>
+            <td class="lp-cmp-us">Every notice is logged</td>
+            <td>Chat history only</td>
+            <td>No record</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="lp-cmp-note">
+      In short: less walking for teachers, no phones for students, and notices that are seen, heard and kept.
+    </p>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="lp-sec" id="faq">
+  <div class="lp-wrap">
+    <div class="lp-sec-head">
+      <h2>Frequently asked questions</h2>
+    </div>
+    <div class="lp-faq">
+      <details open>
+        <summary>Does the classroom computer have to stay on?</summary>
+        <p>Yes. Keep the classroom page open on that computer (an all-in-one panel or an older machine works well) so notices appear instantly.</p>
+      </details>
+      <details>
+        <summary>Why is there no sound when a notice appears?</summary>
+        <p>Browsers only allow audio after the user interacts with the page. Tap or click once on the classroom page after binding, and voice will work from then on.</p>
+      </details>
+      <details>
+        <summary>Can I send notices from my phone?</summary>
+        <p>Yes. The teacher console is a web page — sign in from a mobile browser and you can send notices and check the history.</p>
+      </details>
+      <details>
+        <summary>How many teachers can send notices to one class?</summary>
+        <p>As many as you like. The class owner sends an invite code and other teachers register or join with a co-teacher code.</p>
+      </details>
+      <details>
+        <summary>I lost my card number or forgot my password.</summary>
+        <p>Email <b class="mono">ladyiney25@gmail.com</b> with your account details and we will sort it out.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- Cards -->
+<section class="lp-sec lp-sec-alt" id="price">
+  <div class="lp-wrap">
+    <div class="lp-sec-head">
+      <h2>Activation cards</h2>
+      <p>Access is granted per class. One card, one account, active the moment you register.</p>
+    </div>
+    <div class="lp-price">
+      <div class="lp-plan lp-plan-main">
+        <div class="lp-plan-tag">Recommended</div>
+        <h3>Standard card</h3>
+        <p class="lp-plan-for">For class owners and grade leaders</p>
+        <ul>
+          <li>Includes <b>2 classes</b> after sign-up</li>
+          <li>Full-screen pop-up + voice</li>
+          <li>Scheduled and daily broadcasts</li>
+          <li>Invite other teachers as co-teachers</li>
+          <li>Keep a notice history</li>
+        </ul>
+        <a class="btn btn-pri btn-block" href="#card">Request a standard card</a>
+      </div>
+      <div class="lp-plan">
+        <div class="lp-plan-tag lp-plan-tag-gray">Co-teacher</div>
+        <h3>Co-teacher code</h3>
+        <p class="lp-plan-for">For subject teachers and assistant teachers</p>
+        <ul>
+          <li>Register with a code starting with <b>CO-</b></li>
+          <li>Join someone else's class and send notices</li>
+          <li>No need to create your own class</li>
+          <li>Share the same classroom screen</li>
+        </ul>
+        <a class="btn btn-block" href="#card">Request a co-teacher code</a>
+      </div>
+    </div>
+    <p class="lp-price-note">
+      Need more classes, several campuses or something custom? Email <b class="mono">ladyiney25@gmail.com</b> and tell us what you need.
+    </p>
+  </div>
+</section>
+
+<!-- Request (conversion) -->
+<section class="lp-sec" id="card">
+  <div class="lp-wrap lp-apply">
+    <div class="lp-apply-txt">
+      <h2>Request a free activation card</h2>
+      <p>
+        Fill in your contact email and we will send you a card. You can also email your request
+        straight to <b class="mono">ladyiney25@gmail.com</b>.
+      </p>
+      <ul class="lp-apply-tips">
+        <li>Please include: <b>your contact email</b></li>
+        <li>Tell us whether you need a <b>standard card</b> or a <b>co-teacher code</b></li>
+        <li>We normally reply within <b>1 business day</b></li>
+      </ul>
+      <div class="lp-apply-mail">
+        <span>📧 Request email</span>
+        <b class="mono" id="lpMail">ladyiney25@gmail.com</b>
+        <button class="btn btn-sm" onclick="lpCopyMail()">Copy</button>
+      </div>
+    </div>
+
+    <div class="card lp-apply-form">
+      <h3>Submit your request</h3>
+      <label class="lbl">Contact email *</label>
+      <input class="inp" id="lpContact" type="email" placeholder="e.g. teacher@example.com">
+      <label class="lbl">Anything else (optional)</label>
+      <textarea class="inp" id="lpNote" rows="3" maxlength="200" placeholder="e.g. Two classes please; a daily 8:00 broadcast"></textarea>
+      <div style="height:14px"></div>
+      <button class="btn btn-pri btn-block" id="lpBtn" onclick="lpSubmit()">Submit request</button>
+      <button class="btn btn-block" style="margin-top:8px" onclick="lpMailto()">📧 Send by email instead</button>
+      <p class="muted" style="font-size:12px;margin:10px 0 0;line-height:1.6" id="lpTip">
+        Already have a card? Go straight to <a href="/en/login#reg">create your account</a>.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- Final CTA -->
+<section class="lp-final">
+  <div class="lp-wrap">
+    <h2>Give your classroom a voice</h2>
+    <p>Request an activation card and you can be broadcasting today.</p>
+    <div class="lp-cta lp-cta-center">
+      <a class="btn btn-pri lp-btn-lg" href="#card">Get a free activation card</a>
+      <a class="btn lp-btn-lg" href="/en/login">Sign in to the console</a>
+    </div>
+    <p class="lp-final-mail">
+      Requests &amp; questions: <b class="mono">ladyiney25@gmail.com</b>
+    </p>
+  </div>
+</section>
+
+<footer class="lp-foot">
+  <div class="lp-wrap lp-foot-in">
+    <span>© Class Broadcast System</span>
+    <span class="lp-foot-links">
+      <a href="/en/login">Sign in</a>
+      <a href="/en/room">Classroom</a>
+      <a href="/">中文</a>
+    </span>
+  </div>
+</footer>
 
 <script src="/en/common.js"></script>
 <script>
-function showTab(t) {
-  ['login', 'reg', 'forgot'].forEach((k) => {
-    document.getElementById('pane' + k[0].toUpperCase() + k.slice(1)).classList.toggle('hide', k !== t);
-    document.getElementById('tab' + k[0].toUpperCase() + k.slice(1)).classList.toggle('on', k === t);
-  });
+const LP_EMAIL = 'ladyiney25@gmail.com';
+
+function lpPayload() {
+  return {
+    contact: (document.getElementById('lpContact').value || '').trim(),
+    note: (document.getElementById('lpNote').value || '').trim(),
+    lang: 'en',
+  };
 }
 
-async function doLogin(e) {
-  e.preventDefault();
-  const btn = e.target.querySelector('button[type=submit]');
+async function lpSubmit() {
+  const p = lpPayload();
+  if (p.contact.length < 3) return toast('Please enter your contact email', 'err');
+  const btn = document.getElementById('lpBtn');
   btn.disabled = true;
   try {
-    await api('POST', '/api/auth/login', { username: liUser.value.trim(), password: liPass.value });
-    location.href = '/en/app';
-  } catch (err) {
-    toast(err.message, 'err'); btn.disabled = false;
-  }
-}
-
-async function doReg(e) {
-  e.preventDefault();
-  if (rgPass.value.length < 6) return toast('Password must be at least 6 characters', 'err');
-  if (rgPass.value !== rgPass2.value) return toast('The two passwords do not match', 'err');
-  const btn = e.target.querySelector('button[type=submit]');
-  btn.disabled = true;
-  try {
-    await api('POST', '/api/auth/register', {
-      username: rgUser.value.trim(), password: rgPass.value, cardCode: rgCard.value.trim(),
-    });
-    await joinByInviteCode((rgInvite.value || '').trim().toUpperCase());
-    location.href = '/en/app';
-  } catch (err) {
-    toast(err.message, 'err'); btn.disabled = false;
-  }
-}
-
-/* Invite code entered at sign-up → join that class automatically */
-async function joinByInviteCode(code) {
-  if (!code) return;
-  try {
-    const r = await api('POST', '/api/invite-code/accept', { code });
-    toast(r.already ? 'You are already in this class' : 'Joined class "' + (r.className || '') + '"', 'ok');
-  } catch (e) { toast(e.message, 'err'); }
-}
-
-async function doForgot(e) {
-  e.preventDefault();
-  if (foPass.value.length < 6) return toast('New password must be at least 6 characters', 'err');
-  const btn = e.target.querySelector('button[type=submit]');
-  btn.disabled = true;
-  try {
-    await api('POST', '/api/auth/forgot', { username: foUser.value.trim(), cardCode: foCard.value.trim(), password: foPass.value });
-    toast('Password reset. Please sign in again.', 'ok');
-    showTab('login');
+    await api('POST', '/api/card-request', p);
+    toast('Request received — we will get back to you within 1 business day', 'ok');
+    document.getElementById('lpTip').innerHTML =
+      'Request received ✅ We will contact you within 1 business day. You can also email <b class="mono">' + LP_EMAIL + '</b>. Already have a card? <a href="/en/login#reg">Create your account</a>.';
   } catch (err) {
     toast(err.message, 'err');
   } finally { btn.disabled = false; }
+}
+
+function lpMailto() {
+  const p = lpPayload();
+  const subject = 'Activation card request (Class Broadcast System)';
+  const body = [
+    'Hello, I would like to request an activation card for the Class Broadcast System.',
+    '',
+    'Contact email: ' + (p.contact || '(please fill in)'),
+    'Notes: ' + (p.note || '(none)'),
+  ].join('\n');
+  location.href = 'mailto:' + LP_EMAIL + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+}
+
+async function lpCopyMail() {
+  const ok = await copyText(LP_EMAIL);
+  toast(ok ? 'Email copied: ' + LP_EMAIL : 'Please copy manually: ' + LP_EMAIL, ok ? 'ok' : 'err');
 }
 </script>
 </body>

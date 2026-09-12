@@ -648,7 +648,7 @@ async function handleInvite(id, act) {
 
 async function doLogout() {
   try { await api('POST', '/api/auth/logout'); } catch (e) {}
-  location.href = '/';
+  location.href = '/login';
 }
 
 /* ================= 教室在线轮询 ================= */

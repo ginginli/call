@@ -10,7 +10,7 @@ async function api(method, url, body) {
   try { data = await res.json(); } catch (e) { /* ignore */ }
   if (!res.ok) {
     if (res.status === 401 && !/\/auth\//.test(url)) {
-      location.href = '/';
+      location.href = '/login';
       throw new Error('未登录');
     }
     throw new Error((data && data.error) || ('请求失败(' + res.status + ')'));

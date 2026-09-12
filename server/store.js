@@ -26,6 +26,7 @@ db.users = db.users || [];
 db.cards = db.cards || [];
 db.classes = db.classes || [];
 db.invites = db.invites || [];
+db.cardRequests = db.cardRequests || [];
 db.notifications = db.notifications || [];
 db.jobs = db.jobs || [];
 db.seq = db.seq || 1;

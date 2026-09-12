@@ -3,140 +3,473 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>班级喊话系统 · 登录</title>
+<title>班级喊话系统 · 网页发通知，教室全屏自动播报</title>
+<meta name="description" content="老师在办公室或手机上发一条通知，教室电脑立刻全屏弹出并语音播报。不用装 App，不用跑教室，输入绑定码即可使用。免费申请激活卡号。">
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/landing.css">
 </head>
-<body>
-<div class="language-list floating">
-  <a class="curr" href="/" title="中文">中文</a>
-  <a href="/en/" title="English">English</a>
-</div>
-<div class="auth-bg">
-  <div class="auth-box">
-    <div class="brand">
-      <div class="logo">📢</div>
-      <div>
-        <h1>班级喊话系统</h1>
-        <p>网页发通知 · 教室自动全屏播报</p>
-      </div>
-    </div>
+<body class="lp">
 
-    <div class="card">
-      <div class="tabs">
-        <button id="tabLogin" class="on" onclick="showTab('login')">登录</button>
-        <button id="tabReg" onclick="showTab('reg')">注册账号</button>
-        <button id="tabForgot" onclick="showTab('forgot')">忘记密码</button>
-      </div>
-
-      <!-- 登录 -->
-      <form class="auth-pane" id="paneLogin" onsubmit="return doLogin(event)">
-        <h2>登录后台</h2>
-        <label class="lbl">用户名</label>
-        <input class="inp" id="liUser" autocomplete="username" required>
-        <label class="lbl">密码</label>
-        <input class="inp" id="liPass" type="password" autocomplete="current-password" required>
-        <div style="height:18px"></div>
-        <button class="btn btn-pri btn-block" type="submit">登 录</button>
-      </form>
-
-      <!-- 注册 -->
-      <form class="auth-pane hide" id="paneReg" onsubmit="return doReg(event)">
-        <h2>注册账号</h2>
-        <p class="sub">第一次使用需激活卡号，注册成功自动进入后台</p>
-        <label class="lbl">激活卡号</label>
-        <input class="inp mono" id="rgCard" placeholder="例如 OWN-XXXX-XXXX" style="letter-spacing:1px">
-        <label class="lbl">登录用户名（请牢记，找回密码需用到）</label>
-        <input class="inp" id="rgUser" maxlength="20" required>
-        <label class="lbl">密码(至少 6 位)</label>
-        <input class="inp" id="rgPass" type="password" required>
-        <label class="lbl">确认密码</label>
-        <input class="inp" id="rgPass2" type="password" required>
-        <label class="lbl">班级邀请码（选填 · 协同老师填写）</label>
-        <input class="inp mono" id="rgInvite" placeholder="班主任给你的邀请码" maxlength="12" style="text-transform:uppercase;letter-spacing:2px">
-        <div style="height:18px"></div>
-        <button class="btn btn-pri btn-block" type="submit">立即注册</button>
-        <p class="sub" style="margin:12px 0 0;line-height:1.6" id="rgTip">普通激活卡注册后自带 2 个班级；协同授权码（CO- 开头）注册的是协同账号，不能新建班级</p>
-      </form>
-
-      <!-- 忘记密码 -->
-      <form class="auth-pane hide" id="paneForgot" onsubmit="return doForgot(event)">
-        <h2>找回密码</h2>
-        <p class="sub">输入用户名 + 注册时使用的激活卡号</p>
-        <label class="lbl">用户名</label>
-        <input class="inp" id="foUser" required>
-        <label class="lbl">激活卡号</label>
-        <input class="inp mono" id="foCard" placeholder="例如 OWN-XXXX-XXXX">
-        <label class="lbl">新密码(至少 6 位)</label>
-        <input class="inp" id="foPass" type="password" required>
-        <div style="height:18px"></div>
-        <button class="btn btn-pri btn-block" type="submit">重置密码</button>
-      </form>
+<!-- 顶部导航 -->
+<header class="lp-nav">
+  <div class="lp-wrap lp-nav-in">
+    <a class="lp-logo" href="/">
+      <span class="lp-logo-ico">📢</span>
+      <span>班级喊话系统</span>
+    </a>
+    <nav class="lp-links">
+      <a href="#features">功能</a>
+      <a href="#what">是什么</a>
+      <a href="#how">使用流程</a>
+      <a href="#why">为什么选我们</a>
+      <a href="#faq">常见问题</a>
+      <a href="#price">卡号</a>
+    </nav>
+    <div class="lp-nav-act">
+      <span class="language-list">
+        <a class="curr" href="/" title="中文">中文</a>
+        <a href="/en/" title="English">English</a>
+      </span>
+      <a class="btn btn-sm" href="/login">登录</a>
+      <a class="btn btn-pri btn-sm" href="#card">免费申请卡号</a>
     </div>
   </div>
-</div>
+</header>
+
+<!-- 首屏 -->
+<section class="lp-hero">
+  <div class="lp-wrap lp-hero-in">
+    <div class="lp-hero-txt">
+      <span class="lp-pill">网页发通知 · 教室自动全屏播报</span>
+      <h1>老师不用跑教室，<br><em>一句话全屏播到班</em></h1>
+      <p class="lp-lead">
+        在办公室或手机上敲一句话，教室大屏立刻全屏弹出并语音朗读。
+        不需要装 App，不需要学生端设备，一台能上网的电脑就够。
+      </p>
+      <div class="lp-cta">
+        <a class="btn btn-pri lp-btn-lg" href="#card">免费申请激活卡号</a>
+        <a class="btn lp-btn-lg" href="/login">已有账号，直接登录</a>
+      </div>
+      <p class="lp-cta-note">
+        申请方式：填写联系邮箱<a href="#card">在线提交申请</a>，或发邮件到
+        <b class="mono">ladyiney25@gmail.com</b>，1 个工作日内回复。
+      </p>
+      <ul class="lp-trust">
+        <li>✅ 免安装</li>
+        <li>✅ 全屏 + 语音</li>
+        <li>✅ 支持定时播报</li>
+        <li>✅ 手机也能发</li>
+      </ul>
+    </div>
+
+    <!-- 示意图：老师端 → 教室大屏 -->
+    <div class="lp-mock" aria-hidden="true">
+
+      <!-- ① 老师端（办公室电脑 / 手机） -->
+      <div class="lp-mock-console">
+        <div class="lp-mock-bar">
+          <span></span><span></span><span></span>
+          <i>老师端 · 办公室电脑 / 手机</i>
+          <b>已连接</b>
+        </div>
+        <div class="lp-mock-body">
+          <div class="lp-mock-input">请三年级二班同学到操场集合</div>
+          <div class="lp-mock-btn">发送 📢</div>
+        </div>
+      </div>
+
+      <!-- ② 传输 -->
+      <div class="lp-mock-link"><span>⚡ 瞬间送达教室大屏</span></div>
+
+      <!-- ③ 教室现场：挂在墙上的大屏 -->
+      <div class="lp-mock-room">
+        <div class="lp-mock-walltag">
+          <span>🏫 三年级二班 · 教室</span>
+          <span class="lp-mock-online"><i></i>大屏在线</span>
+        </div>
+
+        <div class="lp-mock-tv">
+          <div class="lp-mock-screen">
+            <!-- 通知铺满整块屏 = 教室大屏全屏播报 -->
+            <div class="lp-mock-ov">
+              <div class="lp-mock-ovhead">
+                <span class="lp-mock-ovtag">📢 三年级二班</span>
+                <span class="lp-mock-ovsub">教室大屏 · 全屏播报中</span>
+              </div>
+              <div class="lp-mock-ovtext">请三年级二班同学<br>到操场集合</div>
+              <div class="lp-mock-ovfoot">
+                <span class="lp-mock-src">来源：王老师 · 14:30</span>
+                <span class="lp-mock-voice">
+                  <span class="lp-mock-wave"><i></i><i></i><i></i><i></i></span>
+                  🔊 正在语音播报…
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="lp-mock-tvbase">
+            <span>◉ CLASS DISPLAY · 65"</span>
+            <span class="lp-mock-led"></span>
+          </div>
+        </div>
+
+        <div class="lp-mock-desks">
+          <span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 功能 -->
+<section class="lp-sec" id="features">
+  <div class="lp-wrap">
+    <div class="lp-sec-head">
+      <h2>把教室变成一块「会说话的公告屏」</h2>
+      <p>老师端的每一次点击，教室端都是全屏弹窗 + 语音播报，不占用上课时间。</p>
+    </div>
+    <div class="lp-grid">
+      <div class="lp-card">
+        <div class="lp-ico">🖥️</div>
+        <h3>全屏弹窗播报</h3>
+        <p>通知发出后，教室电脑立刻全屏显示，后排学生也看得一清二楚，不再靠课间跑腿传话。</p>
+      </div>
+      <div class="lp-card">
+        <div class="lp-ico">🔊</div>
+        <h3>自动语音朗读</h3>
+        <p>弹窗同时把内容读出来，跑操集合、临时调课这种场景，学生边收拾边听得到。</p>
+      </div>
+      <div class="lp-card">
+        <div class="lp-ico">🔗</div>
+        <h3>8 位绑定码连接</h3>
+        <p>教室电脑打开「教室端」输入绑定码即可，换电脑、重装系统都不用再配置。</p>
+      </div>
+      <div class="lp-card">
+        <div class="lp-ico">⏰</div>
+        <h3>定时 / 每日播报</h3>
+        <p>提前排好时间，到点自动播。比如每天 8:00 早读提醒、每周一升旗集合。</p>
+      </div>
+      <div class="lp-card">
+        <div class="lp-ico">👥</div>
+        <h3>协同老师一起用</h3>
+        <p>班主任生成邀请码，任课老师、副班主任用协同授权码加入，都能直接发通知。</p>
+      </div>
+      <div class="lp-card">
+        <div class="lp-ico">🧾</div>
+        <h3>通知留痕可回看</h3>
+        <p>最近 10 条通知完整保留：谁发的、什么时候发的、有没有送达，一目了然。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 是什么 -->
+<section class="lp-sec lp-sec-alt" id="what">
+  <div class="lp-wrap">
+    <div class="lp-sec-head">
+      <h2>什么是班级喊话系统？</h2>
+      <p>一句话：把教室里那台电脑，变成一块「听得见」的公告屏。</p>
+    </div>
+    <div class="lp-what">
+      <div class="lp-what-txt">
+        <p>
+          它是一套给学校用的网页通知工具。老师在任何一台能上网的电脑或手机上，用浏览器打开老师端，
+          敲一句话、点发送；教室里的电脑会立刻全屏弹出这条通知，并自动语音朗读一遍。
+        </p>
+        <p>
+          学生不需要带手机或平板，也不用装任何 App。教室电脑打开一个网址、输入 8 位绑定码就完成配对，
+          之后老师不出办公室，全班也能第一时间听到通知。
+        </p>
+      </div>
+      <ul class="lp-what-list">
+        <li>
+          <b>老师端（网页）</b>
+          <span>手机、办公室电脑的浏览器打开即用，负责发通知、看历史记录。</span>
+        </li>
+        <li>
+          <b>教室端（教室电脑）</b>
+          <span>教室电脑上常驻的一个页面，绑定后负责全屏弹窗和语音播报。</span>
+        </li>
+        <li>
+          <b>后台服务</b>
+          <span>连接两端的「中转站」：账号、班级、绑定码和通知转发都在这里。</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 使用流程 -->
+<section class="lp-sec" id="how">
+  <div class="lp-wrap">
+    <div class="lp-sec-head">
+      <h2>四步就能用起来</h2>
+      <p>从申请卡号到第一次喊话，通常 10 分钟内完成。</p>
+    </div>
+    <ol class="lp-steps">
+      <li>
+        <span class="lp-step-n">1</span>
+        <h3>申请激活卡号</h3>
+        <p>填写联系邮箱<a href="#card">在线提交申请</a>，或发邮件到 <b class="mono">ladyiney25@gmail.com</b>。</p>
+      </li>
+      <li>
+        <span class="lp-step-n">2</span>
+        <h3>注册账号</h3>
+        <p>在<a href="/login#reg">注册页</a>填写卡号、用户名和密码，注册成功直接进入后台。</p>
+      </li>
+      <li>
+        <span class="lp-step-n">3</span>
+        <h3>创建班级拿绑定码</h3>
+        <p>后台新建班级，系统给出一个 8 位绑定码，把这个码放到教室电脑上。</p>
+      </li>
+      <li>
+        <span class="lp-step-n">4</span>
+        <h3>教室端绑定，开始喊话</h3>
+        <p>教室电脑打开<a href="/room">教室端</a>输入绑定码，此后每次发通知都会全屏播报。</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- 为什么选我们 -->
+<section class="lp-sec lp-sec-alt" id="why">
+  <div class="lp-wrap">
+    <div class="lp-sec-head">
+      <h2>为什么选择班级喊话系统</h2>
+      <p>通知要「传得到、看得清、听得到、查得到」，和常见做法比一比。</p>
+    </div>
+    <div class="lp-cmp-wrap">
+      <table class="lp-cmp">
+        <thead>
+          <tr>
+            <th>对比项</th>
+            <th class="lp-cmp-us">班级喊话系统</th>
+            <th>微信群 / QQ 群发消息</th>
+            <th>校园广播 / 跑到教室说</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>老师要不要跑教室</td>
+            <td class="lp-cmp-us">不用，在办公室就能发</td>
+            <td>不用</td>
+            <td>要跑一趟，或去广播室</td>
+          </tr>
+          <tr>
+            <td>学生要不要带手机</td>
+            <td class="lp-cmp-us">不需要，教室电脑就够</td>
+            <td>得有人在看手机</td>
+            <td>不需要</td>
+          </tr>
+          <tr>
+            <td>后排学生看得清吗</td>
+            <td class="lp-cmp-us">全屏大字，一眼看清</td>
+            <td>容易被聊天刷上去</td>
+            <td>看得清，但得人正好在</td>
+          </tr>
+          <tr>
+            <td>会不会自动念出来</td>
+            <td class="lp-cmp-us">自动语音朗读</td>
+            <td>不会</td>
+            <td>靠自己喊</td>
+          </tr>
+          <tr>
+            <td>能不能定时自动播</td>
+            <td class="lp-cmp-us">支持，比如每天 8:00</td>
+            <td>不支持</td>
+            <td>不支持</td>
+          </tr>
+          <tr>
+            <td>谁发的、有没有送达</td>
+            <td class="lp-cmp-us">每条都留痕可回看</td>
+            <td>只见聊天记录</td>
+            <td>没有记录</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="lp-cmp-note">
+      一句话总结：老师少跑一趟，学生不用带手机，通知还能被听见、被看见、被记住。
+    </p>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="lp-sec" id="faq">
+  <div class="lp-wrap">
+    <div class="lp-sec-head">
+      <h2>常见问题</h2>
+    </div>
+    <div class="lp-faq">
+      <details open>
+        <summary>教室电脑需要一直开着吗？</summary>
+        <p>需要。教室端页面保持打开即可（可以放在一体机或一台旧电脑上常驻），这样通知才能即时全屏弹出。</p>
+      </details>
+      <details>
+        <summary>为什么弹窗没有声音？</summary>
+        <p>浏览器要求用户先有一次点击才允许播放声音。绑定完成后在教室端页面上点一下，之后就能正常语音播报了。</p>
+      </details>
+      <details>
+        <summary>手机上能发通知吗？</summary>
+        <p>可以。老师端就是网页，手机浏览器打开登录后一样能发通知、看历史记录。</p>
+      </details>
+      <details>
+        <summary>一个班可以有几个老师发通知？</summary>
+        <p>不限。班主任生成邀请码，其他老师用协同授权码注册或加入后，都能向这个班发通知。</p>
+      </details>
+      <details>
+        <summary>卡号丢了、密码忘了怎么办？</summary>
+        <p>发邮件到 <b class="mono">ladyiney25@gmail.com</b> 说明账号情况，我们帮你处理。</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- 卡号说明 -->
+<section class="lp-sec lp-sec-alt" id="price">
+  <div class="lp-wrap">
+    <div class="lp-sec-head">
+      <h2>卡号说明与申请</h2>
+      <p>系统按班级授权，一张卡对应一个账号，注册即生效。</p>
+    </div>
+    <div class="lp-price">
+      <div class="lp-plan lp-plan-main">
+        <div class="lp-plan-tag">推荐</div>
+        <h3>普通激活卡</h3>
+        <p class="lp-plan-for">适合班主任、年级组长</p>
+        <ul>
+          <li>注册后自带 <b>2 个班级</b></li>
+          <li>全屏弹窗 + 语音播报</li>
+          <li>定时 / 每日自动播报</li>
+          <li>生成邀请码，拉任课老师协同</li>
+          <li>通知历史留痕</li>
+        </ul>
+        <a class="btn btn-pri btn-block" href="#card">申请普通激活卡</a>
+      </div>
+      <div class="lp-plan">
+        <div class="lp-plan-tag lp-plan-tag-gray">协同</div>
+        <h3>协同授权码</h3>
+        <p class="lp-plan-for">适合任课老师、副班主任</p>
+        <ul>
+          <li>用 <b>CO-</b> 开头的授权码注册</li>
+          <li>可加入他人班级并发通知</li>
+          <li>不需要自己新建班级</li>
+          <li>与班主任共用同一块教室大屏</li>
+        </ul>
+        <a class="btn btn-block" href="#card">申请协同授权码</a>
+      </div>
+    </div>
+    <p class="lp-price-note">
+      需要更多班级、多校区或定制功能？同样发邮件到 <b class="mono">ladyiney25@gmail.com</b> 说明情况即可。
+    </p>
+  </div>
+</section>
+
+<!-- 申请卡号（转化） -->
+<section class="lp-sec" id="card">
+  <div class="lp-wrap lp-apply">
+    <div class="lp-apply-txt">
+      <h2>免费申请激活卡号</h2>
+      <p>
+        填写联系邮箱提交申请，我们会把卡号发给你；也可以直接把申请发到邮箱
+        <b class="mono">ladyiney25@gmail.com</b>。
+      </p>
+      <ul class="lp-apply-tips">
+        <li>申请时写清：<b>你的联系邮箱</b></li>
+        <li>说明是<b>班主任 card</b> 还是<b>协同授权码</b>，我们好准备</li>
+        <li>一般 <b>1 个工作日内</b>回复</li>
+      </ul>
+      <div class="lp-apply-mail">
+        <span>📧 申请邮箱</span>
+        <b class="mono" id="lpMail">ladyiney25@gmail.com</b>
+        <button class="btn btn-sm" onclick="lpCopyMail()">复制</button>
+      </div>
+    </div>
+
+    <div class="card lp-apply-form">
+      <h3>在线提交申请</h3>
+      <label class="lbl">联系邮箱 *</label>
+      <input class="inp" id="lpContact" type="email" placeholder="例如：teacher@example.com">
+      <label class="lbl">补充说明（选填）</label>
+      <textarea class="inp" id="lpNote" rows="3" maxlength="200" placeholder="例如：想申请 2 个班的卡；需要每日 8:00 自动播报"></textarea>
+      <div style="height:14px"></div>
+      <button class="btn btn-pri btn-block" id="lpBtn" onclick="lpSubmit()">提交申请</button>
+      <button class="btn btn-block" style="margin-top:8px" onclick="lpMailto()">📧 改用邮箱发送申请</button>
+      <p class="muted" style="font-size:12px;margin:10px 0 0;line-height:1.6" id="lpTip">
+        已有卡号？直接去<a href="/login#reg">注册账号</a>。
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- 底部转化 -->
+<section class="lp-final">
+  <div class="lp-wrap">
+    <h2>给教室装一个「会说话的喇叭」</h2>
+    <p>申请一张激活卡号，今天就能用起来。</p>
+    <div class="lp-cta lp-cta-center">
+      <a class="btn btn-pri lp-btn-lg" href="#card">免费申请激活卡号</a>
+      <a class="btn lp-btn-lg" href="/login">登录后台</a>
+    </div>
+    <p class="lp-final-mail">
+      申请 / 咨询：<b class="mono">ladyiney25@gmail.com</b>
+    </p>
+  </div>
+</section>
+
+<footer class="lp-foot">
+  <div class="lp-wrap lp-foot-in">
+    <span>© 班级喊话系统</span>
+    <span class="lp-foot-links">
+      <a href="/login">登录</a>
+      <a href="/room">教室端</a>
+      <a href="/en/">English</a>
+    </span>
+  </div>
+</footer>
 
 <script src="/common.js"></script>
 <script>
-function showTab(t) {
-  ['login', 'reg', 'forgot'].forEach((k) => {
-    document.getElementById('pane' + k[0].toUpperCase() + k.slice(1)).classList.toggle('hide', k !== t);
-    document.getElementById('tab' + k[0].toUpperCase() + k.slice(1)).classList.toggle('on', k === t);
-  });
+const LP_EMAIL = 'ladyiney25@gmail.com';
+
+function lpPayload() {
+  return {
+    contact: (document.getElementById('lpContact').value || '').trim(),
+    note: (document.getElementById('lpNote').value || '').trim(),
+    lang: 'zh',
+  };
 }
 
-async function doLogin(e) {
-  e.preventDefault();
-  const btn = e.target.querySelector('button[type=submit]');
+async function lpSubmit() {
+  const p = lpPayload();
+  if (p.contact.length < 3) return toast('请先填写联系邮箱', 'err');
+  const btn = document.getElementById('lpBtn');
   btn.disabled = true;
   try {
-    await api('POST', '/api/auth/login', { username: liUser.value.trim(), password: liPass.value });
-    location.href = '/app';
-  } catch (err) {
-    toast(err.message, 'err'); btn.disabled = false;
-  }
-}
-
-async function doReg(e) {
-  e.preventDefault();
-  if (rgPass.value.length < 6) return toast('密码至少 6 位', 'err');
-  if (rgPass.value !== rgPass2.value) return toast('两次输入的密码不一致', 'err');
-  const btn = e.target.querySelector('button[type=submit]');
-  btn.disabled = true;
-  try {
-    await api('POST', '/api/auth/register', {
-      username: rgUser.value.trim(), password: rgPass.value, cardCode: rgCard.value.trim(),
-    });
-    await joinByInviteCode((rgInvite.value || '').trim().toUpperCase());
-    location.href = '/app';
-  } catch (err) {
-    toast(err.message, 'err'); btn.disabled = false;
-  }
-}
-
-/* 注册时填了邀请码 → 自动加入对应班级 */
-async function joinByInviteCode(code) {
-  if (!code) return;
-  try {
-    const r = await api('POST', '/api/invite-code/accept', { code });
-    toast(r.already ? '你已在该班级中' : '已加入班级「' + (r.className || '') + '」', 'ok');
-  } catch (e) { toast(e.message, 'err'); }
-}
-
-async function doForgot(e) {
-  e.preventDefault();
-  if (foPass.value.length < 6) return toast('新密码至少 6 位', 'err');
-  const btn = e.target.querySelector('button[type=submit]');
-  btn.disabled = true;
-  try {
-    await api('POST', '/api/auth/forgot', { username: foUser.value.trim(), cardCode: foCard.value.trim(), password: foPass.value });
-    toast('密码已重置, 请重新登录', 'ok');
-    showTab('login');
+    await api('POST', '/api/card-request', p);
+    toast('申请已提交，我们会在 1 个工作日内联系你', 'ok');
+    document.getElementById('lpTip').innerHTML =
+      '申请已收到 ✅ 我们会在 1 个工作日内联系你；也可以直接发邮件到 <b class="mono">' + LP_EMAIL + '</b>。已有卡号？去<a href="/login#reg">注册账号</a>。';
   } catch (err) {
     toast(err.message, 'err');
   } finally { btn.disabled = false; }
 }
 
+function lpMailto() {
+  const p = lpPayload();
+  const subject = '申请激活卡号（班级喊话系统）';
+  const body = [
+    '你好，我想申请班级喊话系统的激活卡号。',
+    '',
+    '联系邮箱：' + (p.contact || '（请填写）'),
+    '补充说明：' + (p.note || '（无）'),
+  ].join('\n');
+  location.href = 'mailto:' + LP_EMAIL + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+}
 
+async function lpCopyMail() {
+  const ok = await copyText(LP_EMAIL);
+  toast(ok ? '邮箱已复制：' + LP_EMAIL : '请手动复制：' + LP_EMAIL, ok ? 'ok' : 'err');
+}
 </script>
 </body>
 </html>

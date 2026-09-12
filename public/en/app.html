@@ -645,7 +645,7 @@ async function handleInvite(id, act) {
 
 async function doLogout() {
   try { await api('POST', '/api/auth/logout'); } catch (e) {}
-  location.href = '/en/';
+  location.href = '/en/login';
 }
 
 /* ================= classroom presence polling ================= */

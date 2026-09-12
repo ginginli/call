@@ -11,6 +11,7 @@ const http = require('http');
 const express = require('express');
 const { Server } = require('socket.io');
 const { db, persist, nextId } = require('./store');
+const { sendMail, mailStatus } = require('./mailer');
 
 /* 载入项目根目录的 .env (无需额外依赖)。
    已存在的环境变量优先, 不会被 .env 覆盖;
@@ -34,6 +35,7 @@ const { db, persist, nextId } = require('./store');
 
 const PORT = Number(process.env.PORT || 3000);
 const ADMIN_KEY = process.env.CARD_KEY || 'siyunx-admin'; // 模拟"客服发卡"口令
+const CARD_REQUEST_EMAIL = process.env.CARD_EMAIL || 'ladyiney25@gmail.com'; // 申请激活卡号收件邮箱
 const SHOW_DEMO = process.env.DEMO !== 'off';
 const SESSION_TTL = 30 * 24 * 3600 * 1000;
 const CODE_SET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -166,13 +168,16 @@ function classJSON(c, uid) {
 const app = express();
 app.use(express.json({ limit: '200kb' }));
 
+/* 首页 = 落地页(产品介绍 + 申请卡号), 登录页单独放在 /login */
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
+app.get('/login', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'login.html')));
 app.get('/app', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'app.html')));
 app.get('/room', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'room.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'admin.html')));
 
 /* 英文站点 (public/en/) */
 app.get('/en', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'en', 'index.html')));
+app.get('/en/login', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'en', 'login.html')));
 app.get('/en/app', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'en', 'app.html')));
 app.get('/en/room', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'en', 'room.html')));
 app.get('/en/admin', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'en', 'admin.html')));
@@ -244,6 +249,127 @@ app.get('/api/auth/demo-cards', (req, res) => {
   if (!SHOW_DEMO) return res.json({ cards: [] });
   const cards = db.cards.filter((c) => !c.usedBy).slice(0, 12).map((c) => ({ code: c.code, type: c.type }));
   res.json({ cards });
+});
+
+/* ---- 激活卡号申请(落地页 / 注册页提交, 无需登录) ---- */
+function clientIp(req) {
+  const fwd = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return fwd || req.socket.remoteAddress || '';
+}
+
+/* 用请求头拼出站点地址, 方便邮件里放后台入口链接 */
+function baseUrlOf(req) {
+  const configured = String(process.env.PUBLIC_BASE_URL || '').trim();
+  if (configured) return configured.replace(/\/+$/, '');
+  const proto = String(req.headers['x-forwarded-proto'] || req.protocol || 'http').split(',')[0].trim();
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+  return host ? `${proto}://${host}` : '';
+}
+
+/* 收到申请后给站长邮箱发一封通知邮件。
+   异步发送、失败只记日志, 不影响「申请已提交」的响应。 */
+async function notifyCardRequestByMail(rec, req) {
+  const base = baseUrlOf(req);
+  const adminAt = base ? base + '/admin' : '/admin';
+  const time = new Date(rec.createdAt).toLocaleString('zh-CN', {
+    timeZone: process.env.TZ || 'Asia/Shanghai', hour12: false,
+  });
+  const rows = [
+    ['联系邮箱', rec.contact],
+    ['补充说明', rec.note || '（无）'],
+    ['提交时间', time],
+    ['页面语言', rec.lang === 'en' ? 'English' : '中文'],
+    ['来源 IP', rec.ip || '未知'],
+    ['申请编号', rec.id],
+  ];
+  const text = [
+    '收到一条新的激活卡号申请：',
+    '',
+    ...rows.map(([k, v]) => `${k}：${v}`),
+    '',
+    '处理入口：' + adminAt + '（输入发卡口令后可查看全部申请）',
+    '',
+    '—— 班级喊话系统 自动通知',
+  ].join('\n');
+  const html = '<p>收到一条新的<b>激活卡号申请</b>：</p>'
+    + '<table cellpadding="6" cellspacing="0" border="0" style="border-collapse:collapse;font-size:14px">'
+    + rows.map(([k, v]) => `<tr><td style="color:#6b7280;white-space:nowrap">${k}</td><td><b>${v}</b></td></tr>`).join('')
+    + '</table>'
+    + `<p style="margin-top:14px">处理入口：<a href="${adminAt}">${adminAt}</a>（输入发卡口令后可查看全部申请）</p>`;
+
+  const r = await sendMail({
+    to: CARD_REQUEST_EMAIL,
+    subject: `【班级喊话】新的激活卡号申请：${rec.contact}`,
+    text,
+    html,
+    replyTo: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rec.contact) ? rec.contact : undefined,
+  });
+  rec.mail = r.ok ? { ok: true, via: r.via, at: nowISO() } : { ok: false, error: r.error, at: nowISO() };
+  persist();
+  if (r.ok) console.log('  ✉ 申请通知邮件已发送 →', CARD_REQUEST_EMAIL, '(via ' + r.via + ')');
+  else console.warn('  ✉ 申请通知邮件未发送:', r.error);
+}
+
+app.post('/api/card-request', (req, res) => {
+  const { contact, note, lang } = req.body || {};
+  const c = String(contact || '').trim().slice(0, 60);
+  if (c.length < 3) return res.status(400).json({ error: '请填写有效的联系邮箱' });
+  const nt = String(note || '').trim().slice(0, 200);
+  // 同一邮箱 10 分钟内只记一条, 防止重复提交
+  const dup = db.cardRequests.find((r) => r.contact.toLowerCase() === c.toLowerCase()
+    && Date.now() - new Date(r.createdAt).getTime() < 10 * 60 * 1000);
+  if (!dup) {
+    const rec = {
+      id: nextId('cr'), contact: c, note: nt,
+      lang: lang === 'en' ? 'en' : 'zh', status: 'pending',
+      createdAt: nowISO(), ip: clientIp(req),
+    };
+    db.cardRequests.push(rec);
+    persist();
+    console.log('· 收到激活卡号申请:', c);
+    // 给站长邮箱发通知(不阻塞本次响应)
+    notifyCardRequestByMail(rec, req).catch((e) => console.warn('  ✉ 申请通知邮件异常:', e.message));
+  }
+  res.json({ ok: true, email: CARD_REQUEST_EMAIL });
+});
+
+/* 发卡后台: 查看激活卡号申请 */
+app.post('/api/cards/requests', (req, res) => {
+  const { adminKey } = req.body || {};
+  if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: '发卡口令错误' });
+  const list = db.cardRequests.slice().reverse();
+  res.json({
+    total: list.length,
+    pending: list.filter((r) => r.status === 'pending').length,
+    email: CARD_REQUEST_EMAIL,
+    requests: list.slice(0, 200),
+  });
+});
+
+/* 发卡后台: 把某条申请标记为已处理 */
+app.post('/api/cards/requests/done', (req, res) => {
+  const { adminKey, id } = req.body || {};
+  if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: '发卡口令错误' });
+  const r = db.cardRequests.find((x) => x.id === id);
+  if (!r) return res.status(404).json({ error: '申请不存在' });
+  r.status = 'done';
+  r.doneAt = nowISO();
+  persist();
+  res.json({ ok: true });
+});
+
+/* 发卡后台: 发一封测试邮件, 用来验证邮箱通知配置是否可用 */
+app.post('/api/cards/test-mail', async (req, res) => {
+  const { adminKey } = req.body || {};
+  if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: '发卡口令错误' });
+  const r = await sendMail({
+    to: CARD_REQUEST_EMAIL,
+    subject: '【班级喊话】邮件通知测试',
+    text: '如果你收到这封邮件，说明「申请通知邮件」配置成功。\n\n之后每次有老师提交激活卡号申请，系统都会自动发一封同样格式的邮件到这个邮箱。',
+    html: '<p>如果你收到这封邮件，说明<b>「申请通知邮件」配置成功</b>。</p>'
+      + '<p>之后每次有老师提交激活卡号申请，系统都会自动发一封同样格式的邮件到这个邮箱。</p>',
+  });
+  res.json({ ...r, to: CARD_REQUEST_EMAIL });
 });
 
 /* ---- 客服发卡(模拟后台) ---- */
@@ -752,6 +878,10 @@ httpServer.listen(PORT, () => {
   console.log('');
   console.log(`  演示账号: demo / demo123 · 演示绑定码 DEMO8YQZ`);
   console.log(`  客服发卡接口口令(CARD_KEY): ${ADMIN_KEY}  (POST /api/cards/generate)`);
+  const ms = mailStatus();
+  console.log(ms.configured
+    ? `  申请通知邮件: 已开启(${ms.via} → ${CARD_REQUEST_EMAIL})`
+    : `  申请通知邮件: 未配置(可选, 见 .env.example; 配好后提交申请会自动邮件通知 ${CARD_REQUEST_EMAIL})`);
   if (db.cards.length) {
     const list = db.cards.filter((c) => !c.usedBy).slice(0, 8).map((c) => `${c.code}(${c.type === 'co' ? '协同' : '普通'})`);
     console.log(`  可用演示激活卡: ${list.join(', ')}`);
