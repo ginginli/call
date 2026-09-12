@@ -73,6 +73,7 @@ function boot() {
   renderInvites();
   renderJoinBox();
   renderQuotaTip();
+  onDurChange();
   curId = curId && ME.classes.some((c) => c.id === curId) ? curId : (ME.classes[0] ? ME.classes[0].id : null);
   if (curId) selectClass(curId);
   else showEmpty();
@@ -207,16 +208,17 @@ function renderContent() {
       </summary>
       <div class="fold-body">
         <div class="row" style="gap:14px;flex-wrap:wrap;align-items:center;padding:8px 0">
-          <label class="row" style="gap:6px">
+          <label class="row" style="gap:6px;align-items:center">
             <span class="muted" style="font-size:13px">教室弹窗停留</span>
-            <select class="sel" id="selDuration" style="width:auto">
-              <option value="0">自动(按字数 12-60秒)</option>
-              <option value="30">30 秒</option>
-              <option value="60">1 分钟</option>
-              <option value="120">2 分钟</option>
-              <option value="300" selected>5 分钟</option>
-              <option value="600">10 分钟</option>
+            <select class="sel" id="selDuration" style="width:auto" onchange="onDurChange()">
+              <option value="min">按分钟</option>
+              <option value="hour">按小时</option>
+              <option value="-1" selected>一直显示，需手动关闭</option>
             </select>
+            <span id="durInputWrap" class="row hide" style="gap:6px;align-items:center">
+              <input class="inp" id="inpDurNum" type="number" min="1" value="5" style="width:70px;padding:8px 10px">
+              <span id="durUnit" class="muted" style="font-size:13px">分钟</span>
+            </span>
           </label>
           <label class="row" style="gap:6px">
             <span class="muted" style="font-size:13px">发送方式</span>
@@ -227,6 +229,7 @@ function renderContent() {
             </select>
           </label>
         </div>
+        <div class="muted" id="durTip" style="font-size:12px;padding:0 0 6px;display:none">选「一直显示」时，教室屏幕会一直在显示这条通知，直到有人在教室点【最小化待命】，或你点上方「📥 最小化通知屏」远程关掉。</div>
         <div id="cfgOnce" class="hide row" style="gap:8px;align-items:center">
           <span class="muted" style="font-size:13px">发送时刻</span>
           <input class="inp" type="datetime-local" id="inpOnceAt" style="width:auto;padding:8px 10px">
@@ -319,7 +322,7 @@ async function refreshNotifs() {
             <span class="muted" style="font-size:12px">${fmtTime(n.createdAt)}</span>
             ${n.voice === false ? '<span class="badge">静音</span>' : '<span class="badge badge-pri">🔊 播报</span>'}
             ${n.schedule === 'daily' ? '<span class="badge badge-warn">每日定时</span>' : (n.schedule === 'once' ? '<span class="badge badge-pri">定时</span>' : '')}
-            ${n.duration ? '<span class="badge">停留' + fmtDuration(n.duration) + '</span>' : ''}
+            ${n.duration === -1 ? '<span class="badge badge-warn">需手动关闭</span>' : (n.duration ? '<span class="badge">停留' + fmtDuration(n.duration) + '</span>' : '')}
             ${n.delivered ? '<span class="badge badge-ok">已送达教室</span>' : '<span class="badge badge-red">发送时教室离线</span>'}
           </div>
           <div style="margin-top:4px;word-break:break-word">${esc(n.content)}</div>
@@ -395,14 +398,36 @@ function pickColor(el, c) {
 }
 
 function fmtDuration(s) {
+  if (s === -1) return '手动关闭';
   if (!s) return '';
   if (s < 60) return s + '秒';
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  if (r === 0) return m + '分钟';
-  return m + '分' + r + '秒';
+  if (s < 3600) {
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return r === 0 ? m + '分钟' : m + '分' + r + '秒';
+  }
+  const h = Math.floor(s / 3600);
+  const m = Math.round((s % 3600) / 60);
+  return m === 0 ? h + '小时' : h + '小时' + m + '分';
 }
-function durVal() { return Math.max(0, Number(document.getElementById('selDuration').value) || 0); }
+function durVal() {
+  const mode = document.getElementById('selDuration').value;
+  if (mode === '-1') return -1;
+  const inp = document.getElementById('inpDurNum');
+  let n = Math.floor(Number(inp.value));
+  if (!Number.isFinite(n) || n < 1) { n = 1; inp.value = 1; } // 未填或填 0 时按 1 个单位
+  const sec = mode === 'hour' ? n * 3600 : n * 60;
+  return Math.min(sec, 14400); // 最长 4 小时
+}
+function onDurChange() {
+  const mode = document.getElementById('selDuration').value;
+  const wrap = document.getElementById('durInputWrap');
+  const unit = document.getElementById('durUnit');
+  const tip = document.getElementById('durTip');
+  if (wrap) wrap.classList.toggle('hide', mode === '-1');
+  if (unit) unit.textContent = mode === 'hour' ? '小时' : '分钟';
+  if (tip) tip.style.display = mode === '-1' ? '' : 'none';
+}
 function onModeChange() {
   const v = document.getElementById('selMode').value;
   document.getElementById('cfgOnce').classList.toggle('hide', v !== 'once');

@@ -65,7 +65,7 @@
     <div class="ov-body"><div class="txt" id="ovText"></div></div>
     <div class="ov-foot">
       <span id="ovFrom"></span>
-      <span>班级喊话系统 · 点击右上角关闭</span>
+      <span id="ovFootHint">班级喊话系统 · 点击右上角关闭</span>
     </div>
   </div>
 </div>
@@ -228,6 +228,7 @@ socket.on('minimize', () => {
 /* ---------- 通知弹层 ---------- */
 function displayMs(m) {
   const len = (m.content || '').length;
+  if (m.duration === -1) return 0; // 老师选了"不自动关闭": 一直显示, 手动关了才收起
   if (typeof m.duration === 'number' && m.duration > 0) {
     // 老师配置了停留时长; 若语音较长则至少等语音播完再收起
     const cfgMs = m.duration * 1000;
@@ -245,8 +246,11 @@ function showNotify(m) {
   const ov = document.getElementById('overlay');
   ov.classList.remove('hide');
   if (document.fullscreenEnabled) { try { if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); } catch (e) {} }
+  const stay = displayMs(m);
+  const hint = document.getElementById('ovFootHint');
+  if (hint) hint.textContent = stay === 0 ? '需手动关闭 · 点右上角 ✕' : '班级喊话系统 · 点击右上角关闭';
   clearTimeout(overlayTimer);
-  overlayTimer = setTimeout(closeOverlay, displayMs(m));
+  overlayTimer = stay > 0 ? setTimeout(closeOverlay, stay) : null; // 0 = 不自动关闭
 }
 function closeOverlay() {
   document.getElementById('overlay').classList.add('hide');

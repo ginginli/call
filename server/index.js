@@ -560,9 +560,13 @@ app.delete('/api/classes/:id/members/:userId', auth, (req, res) => {
 });
 
 /* ---------------- 定时喊话(任务调度) ---------------- */
+/* 教室弹窗停留时长(秒):
+   -1 = 不自动关闭(需手动关), 0 = 教室端按字数自动, >0 = 指定秒数(最长 4 小时) */
 function clampDur(d) {
   const n = Math.floor(Number(d));
-  return Number.isFinite(n) ? Math.max(0, Math.min(n, 600)) : 0; // 秒,0=教室端自动
+  if (!Number.isFinite(n)) return 0;
+  if (n < 0) return -1;
+  return Math.min(n, 14400);
 }
 function nextDailyTime(time) {
   const [h, m] = String(time).split(':').map((x) => Number(x));
