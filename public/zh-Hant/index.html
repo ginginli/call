@@ -24,6 +24,7 @@
       <a href="#how">使用流程</a>
       <a href="#why">為什麼選我們</a>
       <a href="#faq">常見問題</a>
+      <a href="#idea">回饋</a>
       <a href="#price">卡號</a>
     </nav>
     <div class="lp-nav-act">
@@ -434,6 +435,37 @@
   </div>
 </section>
 
+<!-- 功能建議 -->
+<section class="lp-sec lp-sec-alt" id="idea">
+  <div class="lp-wrap lp-apply">
+    <div class="lp-apply-txt">
+      <h2>想要什麼功能？直接告訴我們</h2>
+      <p>
+        哪裡用著不順手、少了哪個功能、想改哪個細節，都可以寫在這裡。每一則我們都會看，能做的就排進計畫。
+      </p>
+      <ul class="lp-apply-tips">
+        <li>例如「想一次發多張圖片」「希望支援定時播放」「想要手機端更好用」</li>
+        <li>留下信箱，做出來會回信告訴你</li>
+        <li>不留信箱也能提交，只是沒辦法回覆你</li>
+      </ul>
+    </div>
+
+    <div class="card lp-apply-form">
+      <h3>提交功能建議</h3>
+      <label class="lbl">你的建議 *</label>
+      <textarea class="inp" id="frIdea" rows="4" maxlength="500" placeholder="想加什麼功能？或哪裡用著不順手？"></textarea>
+      <div style="height:12px"></div>
+      <label class="lbl">聯絡信箱（選填）</label>
+      <input class="inp" id="frContact" type="email" placeholder="留下信箱，做出來通知你">
+      <div style="height:14px"></div>
+      <button class="btn btn-pri btn-block" id="frBtn" onclick="frSubmit()">提交建議</button>
+      <p class="muted" style="font-size:12px;margin:10px 0 0;line-height:1.6" id="frTip">
+        不用註冊，也不用留信箱。
+      </p>
+    </div>
+  </div>
+</section>
+
 <!-- 底部轉換 -->
 <section class="lp-final">
   <div class="lp-wrap">
@@ -491,6 +523,25 @@ async function lpSubmit() {
 async function lpCopyMail() {
   const ok = await copyText(LP_EMAIL);
   toast(ok ? '電子信箱已複製：' + LP_EMAIL : '請手動複製：' + LP_EMAIL, ok ? 'ok' : 'err');
+}
+
+/* ---------- 功能建議表單 ---------- */
+async function frSubmit() {
+  const idea = (document.getElementById('frIdea').value || '').trim();
+  const contact = (document.getElementById('frContact').value || '').trim();
+  if (idea.length < 5) return toast('請先寫一下你的建議（至少 5 個字）', 'err');
+  const btn = document.getElementById('frBtn');
+  btn.disabled = true;
+  try {
+    await api('POST', '/api/feature-request', { idea, contact, lang: 'zh-Hant' });
+    gaEvent('feature_request_submit', { has_contact: contact ? 1 : 0 });
+    document.getElementById('frIdea').value = '';
+    document.getElementById('frContact').value = '';
+    toast('建議已收到，謝謝！', 'ok');
+    document.getElementById('frTip').innerHTML = '已收到 ✅ 我們會認真看每一則。';
+  } catch (err) {
+    toast(err.message, 'err');
+  } finally { btn.disabled = false; }
 }
 
 /* ---------- 首屏就地演示：打字機 → 光點 → 教室大螢幕彈窗（+ 可選語音） ---------- */

@@ -82,10 +82,21 @@
     <div class="tb-scroll" id="reqList"></div>
   </div>
 
+  <!-- feature requests -->
+  <div class="card admin-card hide" id="frCard">
+    <div class="spread">
+      <h3 style="margin:0;font-size:15px">④ Feature requests</h3>
+      <button class="btn btn-sm" onclick="loadIdeas()">Refresh</button>
+    </div>
+    <p class="muted tip" id="frSum">No ideas yet</p>
+    <p class="muted tip" style="margin-top:2px">Sent from the “Send a feature request” form on the three landing pages — no sign-in needed. If an email was left you can reply directly; otherwise there is only the message.</p>
+    <div class="tb-scroll" id="frList"></div>
+  </div>
+
   <!-- card details: card ↔ registration status -->
   <div class="card admin-card hide" id="listCard">
     <div class="spread" style="gap:10px;flex-wrap:wrap">
-      <h3 style="margin:0;font-size:15px">④ Card details (delivery / registration)</h3>
+      <h3 style="margin:0;font-size:15px">⑤ Card details (delivery / registration)</h3>
       <div class="row" style="gap:8px">
         <input class="inp" id="q" placeholder="Search card / username" style="max-width:200px"
                onkeydown="if(event.key==='Enter'){event.preventDefault();checkStock();}">
@@ -99,7 +110,7 @@
 
   <!-- issue cards -->
   <div class="card admin-card">
-    <h3 style="margin:0 0 4px;font-size:15px">⑤ Generate cards</h3>
+    <h3 style="margin:0 0 4px;font-size:15px">⑥ Generate cards</h3>
     <p class="muted tip" style="margin-bottom:14px">Standard card: sold to teachers, includes 2 classes after sign-up. Co-teacher code: for assistant teachers — they can join someone else's class but cannot create one.</p>
     <div class="row" style="gap:10px;flex-wrap:wrap">
       <select class="inp sel" id="cardType" style="max-width:240px">
@@ -115,7 +126,7 @@
   <!-- result -->
   <div class="card admin-card hide" id="resultCard">
     <div class="spread" style="margin-bottom:12px">
-      <h3 style="margin:0;font-size:15px">⑥ Generated <span id="resCount">0</span> cards</h3>
+      <h3 style="margin:0;font-size:15px">⑦ Generated <span id="resCount">0</span> cards</h3>
       <div class="row" style="gap:8px">
         <button class="btn btn-sm" onclick="copyAll()">Copy all</button>
         <button class="btn btn-sm" onclick="clearResult()">Clear</button>
@@ -178,6 +189,7 @@ async function checkStock(silent) {
     $('stockCard').classList.remove('hide');
     $('listCard').classList.remove('hide');
     $('reqCard').classList.remove('hide');
+    $('frCard').classList.remove('hide');
     $('keyTag').textContent = 'Key verified';
     $('keyTag').className = 'badge badge-ok';
     $('stOwner').textContent = d.unusedOwner;
@@ -186,6 +198,7 @@ async function checkStock(silent) {
     $('defaultKeyWarn').classList.toggle('hide', !d.usingDefaultKey);
     renderList(d);
     loadRequests();
+    loadIdeas();
     if (!silent) toast('Key is correct', 'ok');
   } catch (e) {
     $('keyTag').textContent = 'Key not verified';
@@ -289,6 +302,46 @@ async function doneRequest(id) {
     await post('/api/cards/requests/done', { adminKey: k, id });
     toast('Marked as done', 'ok');
     loadRequests();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+/* ---------- Feature requests ---------- */
+const FR_LANGS = { zh: '简体', 'zh-Hant': '繁體', en: 'English' };
+
+async function loadIdeas() {
+  const k = keyOf();
+  if (!k) return;
+  try {
+    const d = await post('/api/cards/feature-requests', { adminKey: k });
+    $('frSum').textContent = d.total
+      ? (d.total + ' total · ' + d.pending + ' unread')
+      : 'No ideas yet';
+    const box = $('frList');
+    if (!d.requests.length) {
+      box.innerHTML = '<p class="muted tip">No ideas yet. Submissions from the “Send a feature request” form will show up here.</p>';
+      return;
+    }
+    const rows = d.requests.map((r) => `<tr>
+      <td class="mini" style="white-space:normal;min-width:240px;max-width:420px">${esc(r.idea)}</td>
+      <td class="mono mini">${r.contact ? esc(r.contact) : '<span class="muted">none</span>'}</td>
+      <td class="muted mini">${esc(FR_LANGS[r.lang] || r.lang || '—')}</td>
+      <td><span class="badge ${r.status === 'done' ? 'badge-ok' : 'badge-warn'} mini">${r.status === 'done' ? 'Read' : 'Unread'}</span></td>
+      <td class="muted mini">${fmtTime(r.createdAt)}</td>
+      <td>${r.status === 'done' ? '' : `<button class="btn btn-sm" onclick="doneIdea('${esc(r.id)}')">Mark as read</button>`}</td>
+    </tr>`).join('');
+    box.innerHTML = `<table class="tb"><thead><tr>
+      <th>Idea</th><th>Contact email</th><th>Lang</th><th>Status</th><th>Submitted</th><th></th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+  } catch (e) { /* key errors are already reported by checkStock */ }
+}
+
+async function doneIdea(id) {
+  const k = keyOf();
+  if (!k) return;
+  try {
+    await post('/api/cards/feature-requests/done', { adminKey: k, id });
+    toast('Marked as read', 'ok');
+    loadIdeas();
   } catch (e) { toast(e.message, 'err'); }
 }
 

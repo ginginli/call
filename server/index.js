@@ -430,6 +430,98 @@ app.post('/api/card-request', (req, res) => {
   res.json({ ok: true, email: CARD_REQUEST_EMAIL });
 });
 
+/* ---- 功能建议(落地页提交, 无需登录) ----
+   与「申请卡号」共用同一个收件邮箱, 但单独存一份记录, 便于后续在发卡后台查看。 */
+async function notifyFeatureRequestByMail(rec, req) {
+  const base = baseUrlOf(req);
+  const adminAt = base ? base + '/admin' : '/admin';
+  const time = new Date(rec.createdAt).toLocaleString('zh-CN', {
+    timeZone: process.env.TZ || 'Asia/Shanghai', hour12: false,
+  });
+  const rows = [
+    ['建议内容', rec.idea],
+    ['联系邮箱', rec.contact || '（未留）'],
+    ['提交时间', time],
+    ['页面语言', langLabel(rec.lang)],
+    ['来源 IP', rec.ip || '未知'],
+    ['记录编号', rec.id],
+  ];
+  const text = [
+    '收到一条新的功能建议：',
+    '',
+    ...rows.map(([k, v]) => `${k}：${v}`),
+    '',
+    '处理入口：' + adminAt,
+    '',
+    '—— 班级喊话系统 自动通知',
+  ].join('\n');
+  const html = '<p>收到一条新的<b>功能建议</b>：</p>'
+    + '<table cellpadding="6" cellspacing="0" border="0" style="border-collapse:collapse;font-size:14px">'
+    + rows.map(([k, v]) => `<tr><td style="color:#6b7280;white-space:nowrap">${k}</td><td><b>${v}</b></td></tr>`).join('')
+    + '</table>'
+    + `<p style="margin-top:14px">处理入口：<a href="${adminAt}">${adminAt}</a></p>`;
+
+  const r = await sendMail({
+    to: CARD_REQUEST_EMAIL,
+    subject: `【班级喊话】新的功能建议：${String(rec.idea).slice(0, 30)}`,
+    text,
+    html,
+    replyTo: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rec.contact || '') ? rec.contact : undefined,
+  });
+  rec.mail = r.ok ? { ok: true, via: r.via, at: nowISO() } : { ok: false, error: r.error, at: nowISO() };
+  persist();
+  if (r.ok) console.log('  ✉ 功能建议邮件已发送 →', CARD_REQUEST_EMAIL, '(via ' + r.via + ')');
+  else console.warn('  ✉ 功能建议邮件未发送:', r.error);
+}
+
+app.post('/api/feature-request', (req, res) => {
+  const { idea, contact, lang } = req.body || {};
+  const txt = String(idea || '').trim().slice(0, 500);
+  if (txt.length < 5) return res.status(400).json({ error: '请多写几个字，方便我们理解你的需求' });
+  const c = String(contact || '').trim().slice(0, 60);
+  // 该表单邮箱选填, 无法按邮箱去重, 改为同一 IP 2 分钟内只记一条
+  const ip = clientIp(req);
+  const dup = db.featureRequests.find((r) => r.ip === ip
+    && Date.now() - new Date(r.createdAt).getTime() < 2 * 60 * 1000);
+  if (!dup) {
+    const rec = {
+      id: nextId('fr'), idea: txt, contact: c,
+      lang: normLang(lang), status: 'new',
+      createdAt: nowISO(), ip,
+    };
+    db.featureRequests.push(rec);
+    persist();
+    console.log('· 收到功能建议:', txt.slice(0, 40));
+    // 给站长邮箱发通知(不阻塞本次响应)
+    notifyFeatureRequestByMail(rec, req).catch((e) => console.warn('  ✉ 功能建议邮件异常:', e.message));
+  }
+  res.json({ ok: true });
+});
+
+/* 发卡后台: 查看功能建议 */
+app.post('/api/cards/feature-requests', (req, res) => {
+  const { adminKey } = req.body || {};
+  if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: '发卡口令错误' });
+  const list = db.featureRequests.slice().reverse();
+  res.json({
+    total: list.length,
+    pending: list.filter((r) => r.status !== 'done').length,
+    requests: list.slice(0, 200),
+  });
+});
+
+/* 发卡后台: 把某条功能建议标记为已读 */
+app.post('/api/cards/feature-requests/done', (req, res) => {
+  const { adminKey, id } = req.body || {};
+  if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: '发卡口令错误' });
+  const r = db.featureRequests.find((x) => x.id === id);
+  if (!r) return res.status(404).json({ error: '建议不存在' });
+  r.status = 'done';
+  r.doneAt = nowISO();
+  persist();
+  res.json({ ok: true });
+});
+
 /* 发卡后台: 查看激活卡号申请 */
 app.post('/api/cards/requests', (req, res) => {
   const { adminKey } = req.body || {};

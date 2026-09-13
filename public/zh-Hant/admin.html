@@ -82,10 +82,21 @@
     <div class="tb-scroll" id="reqList"></div>
   </div>
 
+  <!-- 功能建議 -->
+  <div class="card admin-card hide" id="frCard">
+    <div class="spread">
+      <h3 style="margin:0;font-size:15px">④ 功能建議</h3>
+      <button class="btn btn-sm" onclick="loadIdeas()">重新整理</button>
+    </div>
+    <p class="muted tip" id="frSum">暫無建議</p>
+    <p class="muted tip" style="margin-top:2px">來自三端首頁的「提交功能建議」表單，無需登入即可提交。有留信箱的可以直接回信；沒留的只能看內容。</p>
+    <div class="tb-scroll" id="frList"></div>
+  </div>
+
   <!-- 卡號明細: 卡密 ↔ 註冊狀態 -->
   <div class="card admin-card hide" id="listCard">
     <div class="spread" style="gap:10px;flex-wrap:wrap">
-      <h3 style="margin:0;font-size:15px">④ 卡號明細（發放 / 註冊狀態）</h3>
+      <h3 style="margin:0;font-size:15px">⑤ 卡號明細（發放 / 註冊狀態）</h3>
       <div class="row" style="gap:8px">
         <input class="inp" id="q" placeholder="搜卡號 / 使用者名稱" style="max-width:200px"
                onkeydown="if(event.key==='Enter'){event.preventDefault();checkStock();}">
@@ -99,7 +110,7 @@
 
   <!-- 發卡 -->
   <div class="card admin-card">
-    <h3 style="margin:0 0 4px;font-size:15px">⑤ 產生卡號</h3>
+    <h3 style="margin:0 0 4px;font-size:15px">⑥ 產生卡號</h3>
     <p class="muted tip" style="margin-bottom:14px">普通啟用卡：賣給老師，註冊後自帶 2 個班級。協同授權碼：給協同老師用，能加入別人的班級、不能建班。</p>
     <div class="row" style="gap:10px;flex-wrap:wrap">
       <select class="inp sel" id="cardType" style="max-width:240px">
@@ -115,7 +126,7 @@
   <!-- 結果 -->
   <div class="card admin-card hide" id="resultCard">
     <div class="spread" style="margin-bottom:12px">
-      <h3 style="margin:0;font-size:15px">⑥ 本次產生 <span id="resCount">0</span> 張</h3>
+      <h3 style="margin:0;font-size:15px">⑦ 本次產生 <span id="resCount">0</span> 張</h3>
       <div class="row" style="gap:8px">
         <button class="btn btn-sm" onclick="copyAll()">複製全部</button>
         <button class="btn btn-sm" onclick="clearResult()">清空</button>
@@ -178,6 +189,7 @@ async function checkStock(silent) {
     $('stockCard').classList.remove('hide');
     $('listCard').classList.remove('hide');
     $('reqCard').classList.remove('hide');
+    $('frCard').classList.remove('hide');
     $('keyTag').textContent = '口令已驗證';
     $('keyTag').className = 'badge badge-ok';
     $('stOwner').textContent = d.unusedOwner;
@@ -186,6 +198,7 @@ async function checkStock(silent) {
     $('defaultKeyWarn').classList.toggle('hide', !d.usingDefaultKey);
     renderList(d);
     loadRequests();
+    loadIdeas();
     if (!silent) toast('口令正確', 'ok');
   } catch (e) {
     $('keyTag').textContent = '口令未驗證';
@@ -289,6 +302,46 @@ async function doneRequest(id) {
     await post('/api/cards/requests/done', { adminKey: k, id });
     toast('已標記為已處理', 'ok');
     loadRequests();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+/* ---------- 功能建議 ---------- */
+const FR_LANGS = { zh: '简体', 'zh-Hant': '繁體', en: 'English' };
+
+async function loadIdeas() {
+  const k = keyOf();
+  if (!k) return;
+  try {
+    const d = await post('/api/cards/feature-requests', { adminKey: k });
+    $('frSum').textContent = d.total
+      ? ('共 ' + d.total + ' 筆 · 未讀 ' + d.pending + ' 筆')
+      : '暫無建議';
+    const box = $('frList');
+    if (!d.requests.length) {
+      box.innerHTML = '<p class="muted tip">還沒有人提交功能建議。三端首頁的「提交功能建議」表單會彙總到這裡。</p>';
+      return;
+    }
+    const rows = d.requests.map((r) => `<tr>
+      <td class="mini" style="white-space:normal;min-width:240px;max-width:420px">${esc(r.idea)}</td>
+      <td class="mono mini">${r.contact ? esc(r.contact) : '<span class="muted">未留</span>'}</td>
+      <td class="muted mini">${esc(FR_LANGS[r.lang] || r.lang || '—')}</td>
+      <td><span class="badge ${r.status === 'done' ? 'badge-ok' : 'badge-warn'} mini">${r.status === 'done' ? '已讀' : '未讀'}</span></td>
+      <td class="muted mini">${fmtTime(r.createdAt)}</td>
+      <td>${r.status === 'done' ? '' : `<button class="btn btn-sm" onclick="doneIdea('${esc(r.id)}')">標記已讀</button>`}</td>
+    </tr>`).join('');
+    box.innerHTML = `<table class="tb"><thead><tr>
+      <th>建議內容</th><th>聯絡信箱</th><th>語言</th><th>狀態</th><th>提交時間</th><th></th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+  } catch (e) { /* 口令錯誤的狀況已在 checkStock 裡提示 */ }
+}
+
+async function doneIdea(id) {
+  const k = keyOf();
+  if (!k) return;
+  try {
+    await post('/api/cards/feature-requests/done', { adminKey: k, id });
+    toast('已標記為已讀', 'ok');
+    loadIdeas();
   } catch (e) { toast(e.message, 'err'); }
 }
 

@@ -24,6 +24,7 @@
       <a href="#how">How it works</a>
       <a href="#why">Why us</a>
       <a href="#faq">FAQ</a>
+      <a href="#idea">Feedback</a>
       <a href="#price">Cards</a>
     </nav>
     <div class="lp-nav-act">
@@ -437,6 +438,37 @@
   </div>
 </section>
 
+<!-- Feature request -->
+<section class="lp-sec lp-sec-alt" id="idea">
+  <div class="lp-wrap lp-apply">
+    <div class="lp-apply-txt">
+      <h2>Missing a feature? Tell us</h2>
+      <p>
+        Something awkward, a feature that's missing, a detail that should work differently — write it here. We read every one and build what we can.
+      </p>
+      <ul class="lp-apply-tips">
+        <li>For example: "send multiple photos at once", "schedule a broadcast", "a better phone experience"</li>
+        <li>Leave your email and we'll write back when it ships</li>
+        <li>No email needed to submit — we just can't reply in that case</li>
+      </ul>
+    </div>
+
+    <div class="card lp-apply-form">
+      <h3>Send a feature request</h3>
+      <label class="lbl">Your idea *</label>
+      <textarea class="inp" id="frIdea" rows="4" maxlength="500" placeholder="What should we add? Or what feels awkward today?"></textarea>
+      <div style="height:12px"></div>
+      <label class="lbl">Contact email (optional)</label>
+      <input class="inp" id="frContact" type="email" placeholder="Leave it and we'll notify you when it ships">
+      <div style="height:14px"></div>
+      <button class="btn btn-pri btn-block" id="frBtn" onclick="frSubmit()">Submit idea</button>
+      <p class="muted" style="font-size:12px;margin:10px 0 0;line-height:1.6" id="frTip">
+        No account, no email required.
+      </p>
+    </div>
+  </div>
+</section>
+
 <!-- Final CTA -->
 <section class="lp-final">
   <div class="lp-wrap">
@@ -494,6 +526,25 @@ async function lpSubmit() {
 async function lpCopyMail() {
   const ok = await copyText(LP_EMAIL);
   toast(ok ? 'Email copied: ' + LP_EMAIL : 'Please copy manually: ' + LP_EMAIL, ok ? 'ok' : 'err');
+}
+
+/* ---------- Feature request form ---------- */
+async function frSubmit() {
+  const idea = (document.getElementById('frIdea').value || '').trim();
+  const contact = (document.getElementById('frContact').value || '').trim();
+  if (idea.length < 5) return toast('Please describe your idea first (at least 5 characters)', 'err');
+  const btn = document.getElementById('frBtn');
+  btn.disabled = true;
+  try {
+    await api('POST', '/api/feature-request', { idea, contact, lang: 'en' });
+    gaEvent('feature_request_submit', { has_contact: contact ? 1 : 0 });
+    document.getElementById('frIdea').value = '';
+    document.getElementById('frContact').value = '';
+    toast('Thanks! Your idea has been sent.', 'ok');
+    document.getElementById('frTip').innerHTML = 'Received \u2705 We read every one.';
+  } catch (err) {
+    toast(err.message, 'err');
+  } finally { btn.disabled = false; }
 }
 
 /* ---------- Hero inline demo: typewriter → spark → full-screen notice (+ optional voice) ---------- */
