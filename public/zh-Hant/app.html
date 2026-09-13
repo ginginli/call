@@ -13,31 +13,45 @@
   details.fold .fold-open{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap}
   details.fold .fold-body{padding:0 16px 14px}
   details.fold[open]>summary{border-bottom:1px solid var(--line)}
+  /* 體驗帳號引導條 */
+  .trial-bar{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;border:1px solid #ddd6fe;border-radius:14px;background:linear-gradient(135deg,#f5f3ff,#eef2ff);padding:16px 18px}
+  .trial-main{flex:1;min-width:260px}
+  .trial-h{font-weight:800;font-size:15px;color:#4338ca;margin-bottom:6px}
+  .trial-p{font-size:13px;color:#4b5563;line-height:1.7;margin-bottom:12px}
+  .trial-steps{display:flex;gap:10px;flex-wrap:wrap}
+  .trial-step{flex:1;min-width:165px;text-align:left;background:#fff;border:1px solid #e0e7ff;border-radius:11px;padding:11px 13px;font:inherit;transition:.15s}
+  .trial-step.go{cursor:pointer;border-color:#c7d2fe}
+  .trial-step.go:hover{border-color:#818cf8;box-shadow:0 6px 16px rgba(79,70,229,.14)}
+  .trial-step b{display:block;font-size:13.5px;color:#312e81;margin-bottom:3px}
+  .trial-step span{font-size:12px;color:#6b7280;line-height:1.5}
+  .trial-cta{text-align:right}
+  .trial-note{font-size:11.5px;color:#9ca3af;margin-top:8px}
 </style>
 </head>
 <body>
 
 <header class="topbar">
-  <div class="mini-logo">
+  <a class="mini-logo" href="/zh-Hant/" title="返回首頁">
     <div class="logo">📢</div>
     <span>班級喊話系統</span>
-  </div>
+  </a>
   <div class="row" style="gap:10px">
     <span class="badge badge-pri" id="uType"></span>
     <span class="muted" id="uQuota"></span>
     <span style="font-weight:600" id="uName"></span>
-    <span class="language-list">
-      <a href="/app" title="简体中文">简体</a>
-      <a class="curr" href="/zh-Hant/app" title="繁體中文">繁體</a>
-      <a href="/en/app" title="English">English</a>
-    </span>
-    <button class="btn btn-sm btn-danger" onclick="doLogout()">登出</button>
+    <select class="lang-select" title="切換語言" aria-label="切換語言" onchange="if(this.value)location.href=this.value">
+      <option value="/app">简体</option>
+      <option value="/zh-Hant/app" selected>繁體</option>
+      <option value="/en/app">English</option>
+    </select>
+    <button class="btn btn-sm btn-danger" id="btnLogout" onclick="doLogout()" data-ga="logout" data-ga-pos="topbar">登出</button>
   </div>
 
 </header>
 
 <div id="inviteBox" style="max-width:1240px;margin:14px auto 0;padding:0 18px"></div>
 <div id="joinBox" style="max-width:1240px;margin:10px auto 0;padding:0 18px"></div>
+<div id="trialBox" style="max-width:1240px;margin:10px auto 0;padding:0 18px"></div>
 
 <main class="layout">
   <aside class="side">
@@ -72,6 +86,45 @@ let curId = null;       // 目前選取的班級 id
 let cur = null;         // 目前班級物件副本
 let msgColor = COLORS[0];
 
+/* ================= 體驗帳號引導(僅體驗帳號可見) ================= */
+function renderTrial() {
+  const box = document.getElementById('trialBox');
+  const u = ME.user;
+  if (!u.trial) { box.innerHTML = ''; return; }
+  const cls = ME.classes.find((c) => c.isOwner);
+  const code = (cls && cls.bindCode) || '';
+  box.innerHTML = `
+    <div class="trial-bar">
+      <div class="trial-main">
+        <div class="trial-h">🧪 體驗模式：你正在使用臨時體驗帳號「${esc(u.username)}」</div>
+        <div class="trial-p">這不是正式帳號，<b>24 小時後連同資料一起自動清空</b>（功能是真的，只是留不住）。走完下面 3 步，就能看到「老師在辦公室發一句 → 教室大屏立刻全螢幕彈出並語音播報」的完整過程。</div>
+        <div class="trial-steps">
+          <button type="button" class="trial-step go" data-ga="open_room" data-ga-pos="trial_bar" onclick="trialOpenRoom('${esc(code)}')">
+            <b>① 開啟教室屏</b>
+            <span>點這裡新開一個視窗，綁定碼 ${esc(code)} 已自動填好</span>
+          </button>
+          <div class="trial-step">
+            <b>② 回來發一則通知</b>
+            <span>在右側輸入框寫一句話，點「發送通知」</span>
+          </div>
+          <div class="trial-step">
+            <b>③ 看教室屏彈窗</b>
+            <span>另一個視窗會全螢幕彈出，並把這句話唸出來</span>
+          </div>
+        </div>
+      </div>
+      <div class="trial-cta">
+        <a class="btn btn-pri" href="/zh-Hant/#card" data-ga="apply_full_access" data-ga-pos="trial_bar">免費申請正式使用</a>
+        <div class="trial-note">體驗帳號僅作示範，24 小時後自動清空 · <a href="/zh-Hant/" data-ga="back_home" data-ga-pos="trial_bar">返回首頁</a></div>
+      </div>
+    </div>`;
+}
+
+function trialOpenRoom(code) {
+  window.open('/zh-Hant/room' + (code ? '?code=' + encodeURIComponent(code) : ''), '_blank');
+  toast('教室屏已在新視窗開啟：把它拖到另一塊螢幕，或縮小後和本頁並排，就能看到彈窗');
+}
+
 /* ================= 基礎渲染 ================= */
 function boot() {
   renderTop();
@@ -87,10 +140,12 @@ function boot() {
 function renderTop() {
   const u = ME.user;
   document.getElementById('uName').textContent = u.username;
-  document.getElementById('uType').textContent = u.type === 'co' ? '協同帳號' : '主帳號';
-  document.getElementById('uType').className = 'badge ' + (u.type === 'co' ? 'badge-warn' : 'badge-pri');
+  document.getElementById('uType').textContent = u.trial ? '體驗帳號' : (u.type === 'co' ? '協同帳號' : '主帳號');
+  document.getElementById('uType').className = 'badge ' + ((u.trial || u.type === 'co') ? 'badge-warn' : 'badge-pri');
   document.getElementById('uQuota').textContent = u.type === 'owner'
     ? ('已建立 ' + (u.ownedCount || 0) + ' / ' + (u.classLimit || 0) + ' 個班級') : '';
+  const lo = document.getElementById('btnLogout');
+  if (lo) lo.textContent = u.trial ? '退出體驗' : '登出';
 }
 
 function renderSide() {
@@ -98,7 +153,7 @@ function renderSide() {
   const owned = ME.classes.filter((c) => c.isOwner);
   const shared = ME.classes.filter((c) => !c.isOwner);
   const item = (c) => `
-    <div class="class-item ${c.id === curId ? 'on' : ''}" onclick="selectClass('${c.id}')">
+    <div class="class-item ${c.id === curId ? 'on' : ''}" data-ga="switch_class" data-ga-pos="sidebar" onclick="selectClass('${c.id}')">
       <span class="dot ${c.online ? 'on' : 'off'}"></span>
       <div class="grow" style="min-width:0">
         <div class="cname">${esc(c.name)}</div>
@@ -116,7 +171,7 @@ function renderSide() {
     wrap.innerHTML = `
       <div style="display:flex;gap:8px">
         <input class="inp grow" id="newName" maxlength="20" placeholder="輸入新班級名稱，如 三年二班">
-        <button class="btn btn-pri" onclick="doCreate()">建立</button>
+        <button class="btn btn-pri" data-ga="create_class" data-ga-pos="sidebar" onclick="doCreate()">建立</button>
       </div>`;
   } else wrap.innerHTML = '';
 }
@@ -149,8 +204,8 @@ function renderInvites() {
       <div class="grow">
         <b>${esc(iv.ownerName)}</b> 邀請你加入班級 <b>${esc(iv.className)}</b>，接受後即可發送通知
       </div>
-      <button class="btn btn-pri btn-sm" onclick="handleInvite('${iv.id}','accept')">接受</button>
-      <button class="btn btn-sm" onclick="handleInvite('${iv.id}','reject')">拒絕</button>
+      <button class="btn btn-pri btn-sm" data-ga="invite_accept" data-ga-pos="invite_banner" onclick="handleInvite('${iv.id}','accept')">接受</button>
+      <button class="btn btn-sm" data-ga="invite_reject" data-ga-pos="invite_banner" onclick="handleInvite('${iv.id}','reject')">拒絕</button>
     </div>`).join('');
 }
 
@@ -186,12 +241,12 @@ function renderContent() {
         ${isOwner ? `
         <span class="muted" style="font-size:13px">綁定碼</span>
         <code id="bindCode" class="mono" style="font-size:15px;background:#f3f4fb;padding:4px 10px;border-radius:6px;color:#1e2434">${esc(c.bindCode || '')}</code>
-        <button class="btn btn-sm" onclick="copyBind()">複製</button>` : ''}
-        <button class="btn btn-sm" onclick="remoteMinimize()">📥 最小化通知螢幕</button>
+        <button class="btn btn-sm" data-ga="copy_bind" data-ga-pos="class_head" onclick="copyBind()">複製</button>` : ''}
+        <button class="btn btn-sm" data-ga="remote_minimize" data-ga-pos="class_head" onclick="remoteMinimize()">📥 最小化通知螢幕</button>
         ${isOwner ? `
-          <button class="btn btn-sm" onclick="toggleRename()" id="btnRename">✎ 重新命名</button>
-          <button class="btn btn-sm btn-danger" onclick="doDeleteClass()">刪除班級</button>` : `
-          <button class="btn btn-sm btn-danger" onclick="doLeave()">退出該班級</button>`}
+          <button class="btn btn-sm" data-ga="rename_class" data-ga-pos="class_head" onclick="toggleRename()" id="btnRename">✎ 重新命名</button>
+          <button class="btn btn-sm btn-danger" data-ga="delete_class" data-ga-pos="class_head" onclick="doDeleteClass()">刪除班級</button>` : `
+          <button class="btn btn-sm btn-danger" data-ga="leave_class" data-ga-pos="class_head" onclick="doLeave()">退出該班級</button>`}
       </div>
     </div>
     <div id="renameBox" class="hide" style="margin-top:10px;display:flex;gap:8px"></div>
@@ -256,8 +311,8 @@ function renderContent() {
         <span class="muted" style="font-size:13px">彈出視窗顏色</span>
         <span class="swatches" id="swatches"></span>
       </div>
-      <button class="btn btn-sm" onclick="sendTest()">🔊 測試</button>
-      <button class="btn btn-pri btn-sm" id="btnSend" style="margin-left:auto;padding:10px 22px;font-size:15px" onclick="sendByMode()">發送到教室 📢</button>
+      <button class="btn btn-sm" data-ga="send_test" data-ga-pos="compose" onclick="sendTest()">🔊 測試</button>
+      <button class="btn btn-pri btn-sm" id="btnSend" style="margin-left:auto;padding:10px 22px;font-size:15px" data-ga="send_click" data-ga-pos="compose" onclick="sendByMode()">發送到教室 📢</button>
     </div>
   </div>
 
@@ -286,14 +341,14 @@ function renderContent() {
     <div class="fold-body">
       <p class="muted" style="margin:2px 0 10px;font-size:13px">對方先用 <b style="color:#374151">CO- 開頭協同授權碼</b> 註冊協同帳號；把下方邀請碼發給對方，登入後在「加入班級」處輸入即可加入本班。</p>
       <div class="row" id="codeGenRow" style="gap:8px;margin-bottom:6px">
-        <button class="btn btn-pri btn-sm" onclick="makeInviteCode()">🔑 產生邀請碼</button>
+        <button class="btn btn-pri btn-sm" data-ga="invite_code_gen" data-ga-pos="co_manage" onclick="makeInviteCode()">🔑 產生邀請碼</button>
       </div>
       <div id="codeRow" style="display:none;margin-bottom:6px">
         <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
           <span id="invCode" class="mono" style="font-size:22px;font-weight:800;letter-spacing:6px;padding:8px 16px;background:#f3f4f6;border:1px dashed var(--line);border-radius:10px"></span>
-          <button class="btn btn-sm" onclick="copyInviteCode()">複製</button>
-          <button class="btn btn-sm btn-danger" onclick="revokeInviteCode()">作廢</button>
-          <button class="btn btn-sm" onclick="makeInviteCode()">重新產生</button>
+          <button class="btn btn-sm" data-ga="invite_code_copy" data-ga-pos="co_manage" onclick="copyInviteCode()">複製</button>
+          <button class="btn btn-sm btn-danger" data-ga="invite_code_revoke" data-ga-pos="co_manage" onclick="revokeInviteCode()">作廢</button>
+          <button class="btn btn-sm" data-ga="invite_code_regen" data-ga-pos="co_manage" onclick="makeInviteCode()">重新產生</button>
         </div>
       </div>
       <p class="muted" style="font-size:12px;margin:0 0 10px" id="codeHint"></p>
@@ -304,7 +359,7 @@ function renderContent() {
 
   // 色板
   const sw = document.getElementById('swatches');
-  sw.innerHTML = COLORS.map((cl) => `<span class="sw ${cl === msgColor ? 'on' : ''}" style="background:${cl}" data-c="${cl}" onclick="pickColor(this,'${cl}')"></span>`).join('');
+  sw.innerHTML = COLORS.map((cl) => `<span class="sw ${cl === msgColor ? 'on' : ''}" style="background:${cl}" data-c="${cl}" data-ga="pick_color" data-ga-pos="compose" onclick="pickColor(this,'${cl}')"></span>`).join('');
   if (isOwner && document.getElementById('coList')) loadCoManage();
 }
 
@@ -457,6 +512,7 @@ async function doSend() {
       content, voice: document.getElementById('chkVoice').checked, color: msgColor, duration: durVal(),
     });
     const n = res.notification;
+    gaEvent('notify_sent', { mode: 'now', voice: document.getElementById('chkVoice').checked, long_stay: durVal() === -1 ? 1 : 0, delivered: n.delivered ? 1 : 0 });
     toast(n.delivered ? '已發送，教室端正在播報' : '已發送，但教室端目前離線（可能無法播報）', n.delivered ? 'ok' : 'err');
     document.getElementById('txtContent').value = '';
     refreshNotifs();
@@ -481,6 +537,7 @@ async function doSchedule() {
       const res = await api('POST', `/api/classes/${curId}/jobs`, { ...common, type: 'daily', time: tm });
       msg = '已開啟每日喊話, 每天 ' + res.job.hm + ' 自動播報';
     }
+    gaEvent('notify_scheduled', { mode: v, voice: document.getElementById('chkVoice').checked });
     toast(msg, 'ok');
     document.getElementById('txtContent').value = '';
     document.getElementById('selMode').value = 'now';
@@ -508,8 +565,8 @@ async function refreshJobs() {
           </div>
           <div style="margin-top:4px;word-break:break-word">${esc(j.content)}</div>
         </div>
-        <button class="btn btn-sm" onclick="runJobNow('${j.id}')">立即喊一次</button>
-        <button class="btn btn-sm btn-danger" onclick="cancelJob('${j.id}')">取消</button>
+        <button class="btn btn-sm" data-ga="job_run_now" data-ga-pos="jobs" onclick="runJobNow('${j.id}')">立即喊一次</button>
+        <button class="btn btn-sm btn-danger" data-ga="job_cancel" data-ga-pos="jobs" onclick="cancelJob('${j.id}')">取消</button>
       </div>`).join('');
   } catch (e) { /* ignore */ }
 }
@@ -531,6 +588,7 @@ async function runJobNow(id) {
 async function sendTest() {
   try {
     const res = await api('POST', `/api/classes/${curId}/notify`, { content: '測試播報：通知系統運作正常，聲音正常。', voice: true, color: msgColor });
+    gaEvent('notify_test', { delivered: res.notification.delivered ? 1 : 0 });
     toast(res.notification.delivered ? '測試通知已播報' : '教室端離線，測試通知未送達', res.notification.delivered ? 'ok' : 'err');
     refreshNotifs();
   } catch (e) { toast(e.message, 'err'); }
@@ -581,7 +639,7 @@ async function loadCoManage() {
       (data.members.length ? data.members.map((m) => `
         <div class="row spread" style="padding:6px 0">
           <span><b>${esc(m.username)}</b> <span class="badge badge-warn">協同</span></span>
-          <button class="btn btn-sm btn-danger" onclick="removeMember('${m.id}')">移除</button>
+          <button class="btn btn-sm btn-danger" data-ga="member_remove" data-ga-pos="co_manage" onclick="removeMember('${m.id}')">移除</button>
         </div>`).join('') : '<div class="muted" style="font-size:13px">暫無，把上方邀請碼發給協同老師即可加入</div>');
   } catch (e) { /* ignore */ }
 }
@@ -609,7 +667,7 @@ function renderJoinBox() {
     <div class="card" style="padding:12px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <span class="badge badge-pri" style="font-size:13px">🔑 加入班級</span>
       <input class="inp grow" id="joinCode" placeholder="輸入班主任給你的邀請碼" maxlength="12" style="text-transform:uppercase;letter-spacing:2px">
-      <button class="btn btn-pri btn-sm" onclick="joinByCode()">加入</button>
+      <button class="btn btn-pri btn-sm" data-ga="join_by_code" data-ga-pos="join_box" onclick="joinByCode()">加入</button>
     </div>`;
 }
 
@@ -649,8 +707,9 @@ async function handleInvite(id, act) {
 }
 
 async function doLogout() {
+  const isTrial = !!(ME.user && ME.user.trial);
   try { await api('POST', '/api/auth/logout'); } catch (e) {}
-  location.href = '/zh-Hant/login';
+  location.href = isTrial ? '/zh-Hant/' : '/zh-Hant/login';
 }
 
 /* ================= 教室線上輪詢 ================= */
@@ -683,7 +742,9 @@ async function pollPresence() {
 (async function init() {
   try {
     ME = await api('GET', '/api/me');
+    window.GA_CTX = { trial: ME.user.trial ? 1 : 0, acct: ME.user.type };   // 讓之後所有埋點自動帶上帳號類型
     boot();
+    renderTrial();
     setInterval(pollPresence, 6000);
     // 渲染內容後載入協同老師列表
     setInterval(() => { if (cur && cur.isOwner && document.getElementById('coList')) loadCoManage(); }, 10000);

@@ -16,11 +16,11 @@
       <span class="chip" id="stateChip"><span class="dot gray" id="stateDot"></span><span id="stateText">未连接</span></span>
     </div>
     <div class="row" style="flex-wrap:wrap;gap:8px">
-      <span class="language-list on-dark" style="margin-right:4px">
-        <a class="curr" href="/room" title="简体中文">简体</a>
-        <a href="/zh-Hant/room" title="繁體中文">繁體</a>
-        <a href="/en/room" title="English">English</a>
-      </span>
+      <select class="lang-select on-dark" title="切换语言" aria-label="切换语言" style="margin-right:4px" onchange="if(this.value)location.href=this.value">
+        <option value="/room" selected>简体</option>
+        <option value="/zh-Hant/room">繁體</option>
+        <option value="/en/room">English</option>
+      </select>
       <button class="btn btn-sm" id="btnSound" onclick="toggleSound()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">🔊 声音开</button>
       <button class="btn btn-sm" onclick="toggleFull()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⛶ 全屏</button>
       <button class="btn btn-sm" onclick="doTest()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">测试播报</button>
@@ -80,6 +80,12 @@
 <script>
 /* ---------- 状态 ---------- */
 let code = localStorage.getItem('room_code') || '';
+/* 支持 /room?code=XXXXXX 直接绑定(一键体验引导用), 优先于本地记录 */
+(function () {
+  let q = '';
+  try { q = new URLSearchParams(location.search).get('code') || ''; } catch (e) { q = ''; }
+  if (q) { code = q.trim().toUpperCase(); localStorage.setItem('room_code', code); }
+})();
 let soundOn = localStorage.getItem('room_sound') !== '0';
 let audioUnlocked = false;
 let className = '';

@@ -70,9 +70,19 @@ async function copyText(t) {
    不會阻擋頁面渲染; gtag.js 載入成功後才真正上報。 */
 (function () {
   var GA_ID = 'G-ZNQCX7BSM0';
+  var HOST = location.hostname;
+  var isLocal = !HOST || HOST === 'localhost' || HOST === '127.0.0.1'
+    || /^192\.168\./.test(HOST) || /^10\./.test(HOST) || /\.local$/i.test(HOST);
+  /* 本地/內網預設不載入 GA4, 免得除錯流量污染統計;
+     想在本地驗證埋點, 用 ?ga=1 開啟, 例如 http://localhost:3000/zh-Hant/?ga=1 */
+  var on = !isLocal || /[?&]ga=1/.test(location.search);
+
   if (window.gtag) return;                                   // 已注入過就不重複
   window.dataLayer = window.dataLayer || [];
-  window.gtag = function () { window.dataLayer.push(arguments); };
+  window.gtag = on ? function () { window.dataLayer.push(arguments); } : function () {};
+
+  if (!on) return;
+
   window.gtag('js', new Date());
   window.gtag('config', GA_ID);
   var s = document.createElement('script');
@@ -80,3 +90,28 @@ async function copyText(t) {
   s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
   document.head.appendChild(s);
 })();
+
+/* ---------- 按鈕點擊埋點 ---------- */
+/* 事件委派: 元素上寫 data-ga="事件名"(可選 data-ga-pos="位置") 就會被上報,
+   不用替每個按鈕掛 onclick。附帶 lang / page_path, 方便依語言站與頁面拆開看。 */
+(function () {
+  document.addEventListener('click', function (e) {
+    var el = e.target && e.target.closest ? e.target.closest('[data-ga]') : null;
+    if (!el) return;
+    var params = {
+      position: el.getAttribute('data-ga-pos') || 'unknown',
+      lang: document.documentElement.lang || 'zh-Hant',
+      page_path: location.pathname
+    };
+    var ctx = window.GA_CTX;   // 頁面注入的上下文(如體驗帳號標誌), 有就一併上報
+    if (ctx) for (var k in ctx) {
+      if (Object.prototype.hasOwnProperty.call(ctx, k)) params[k] = ctx[k];
+    }
+    window.gtag('event', el.getAttribute('data-ga'), params);
+  }, true);
+})();
+
+/* 頁面自己觸發的埋點入口(如表單送出成功) */
+function gaEvent(name, params) {
+  try { window.gtag('event', name, params || {}); } catch (e) { /* 忽略 */ }
+}

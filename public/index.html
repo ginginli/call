@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>班级喊话系统 · 网页发通知，教室全屏自动播报</title>
-<meta name="description" content="老师在办公室或手机上发一条通知，教室电脑立刻全屏弹出并语音播报。不用装 App，不用跑教室，输入绑定码即可使用。免费申请激活卡号。">
+<meta name="description" content="老师在办公室或手机上发一条通知，教室电脑立刻全屏弹出并语音播报。不用装 App、不用跑教室，输入绑定码即可使用。免注册可先进临时环境体验，满意再申请正式卡号。">
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/landing.css">
 </head>
@@ -26,13 +26,14 @@
       <a href="#price">卡号</a>
     </nav>
     <div class="lp-nav-act">
-      <span class="language-list">
-        <a class="curr" href="/" title="简体中文">简体</a>
-        <a href="/zh-Hant/" title="繁體中文">繁體</a>
-        <a href="/en/" title="English">English</a>
-      </span>
-      <a class="btn btn-sm" href="/login">登录</a>
-      <a class="btn btn-pri btn-sm" href="#card">免费申请卡号</a>
+      <select class="lang-select" title="切换语言" aria-label="切换语言" onchange="if(this.value)location.href=this.value">
+        <option value="/" selected>简体</option>
+        <option value="/zh-Hant/">繁體</option>
+        <option value="/en/">English</option>
+      </select>
+      <a class="btn btn-sm lp-hide-sm" href="/login" data-ga="sign_in" data-ga-pos="nav">登录</a>
+      <a class="btn btn-sm lp-hide-sm" href="/try" data-ga="try_sandbox" data-ga-pos="nav">免注册体验</a>
+      <a class="btn btn-pri btn-sm" href="#card" data-ga="apply_full_access" data-ga-pos="nav">免费申请正式使用</a>
     </div>
   </div>
 </header>
@@ -48,12 +49,13 @@
         不需要装 App，不需要学生端设备，一台能上网的电脑就够。
       </p>
       <div class="lp-cta">
-        <a class="btn btn-pri lp-btn-lg" href="#card">免费申请激活卡号</a>
-        <a class="btn lp-btn-lg" href="/login">已有账号，直接登录</a>
+        <a class="btn btn-pri lp-btn-lg" href="#card" data-ga="apply_full_access" data-ga-pos="hero">免费申请正式使用</a>
+        <a class="btn lp-btn-lg" href="/try" data-ga="try_sandbox" data-ga-pos="hero">▷ 免注册体验</a>
       </div>
       <p class="lp-cta-note">
-        申请方式：填写联系邮箱<a href="#card">在线提交申请</a>，或发邮件到
-        <b class="mono">ladyiney25@gmail.com</b>，1 个工作日内回复。
+        <b>免费申请正式使用</b>：填邮箱领<b>正式卡号</b>，长期使用，1 个工作日内回复。
+        <br><b>免注册体验</b>：不用注册、不用留邮箱，立刻进一个<b>临时演示环境</b>，24 小时后自动清空，只能先看看效果。
+        <br>想听声音？点右边屏幕上的 <b>▶</b> 播放一遍，或<a href="/try" data-ga="try_sandbox" data-ga-pos="hero_note">直接进临时后台体验</a>。已有账号？<a href="/login" data-ga="sign_in" data-ga-pos="hero_note">直接登录</a>。
       </p>
       <ul class="lp-trust">
         <li>✅ 免安装</li>
@@ -63,8 +65,8 @@
       </ul>
     </div>
 
-    <!-- 示意图：老师端 → 教室大屏 -->
-    <div class="lp-mock" aria-hidden="true">
+    <!-- 就地演示：老师端 → 教室大屏（默认静音自动循环，点 ▶ 开启语音） -->
+    <div class="lp-mock" id="lpMock">
 
       <!-- ① 老师端（办公室电脑 / 手机） -->
       <div class="lp-mock-console">
@@ -74,13 +76,16 @@
           <b>已连接</b>
         </div>
         <div class="lp-mock-body">
-          <div class="lp-mock-input">请三年级二班同学到操场集合</div>
-          <div class="lp-mock-btn">发送 📢</div>
+          <div class="lp-mock-input" id="lpInput"></div>
+          <div class="lp-mock-btn" id="lpSend">发送 📢</div>
         </div>
       </div>
 
       <!-- ② 传输 -->
-      <div class="lp-mock-link"><span>⚡ 瞬间送达教室大屏</span></div>
+      <div class="lp-mock-link">
+        <span>⚡ 瞬间送达教室大屏</span>
+        <i class="lp-mock-spark" id="lpSpark"></i>
+      </div>
 
       <!-- ③ 教室现场：挂在墙上的大屏 -->
       <div class="lp-mock-room">
@@ -91,21 +96,35 @@
 
         <div class="lp-mock-tv">
           <div class="lp-mock-screen">
+
+            <!-- 待机：大屏计时 -->
+            <div class="lp-mock-idle" id="lpIdle">
+              <div class="lp-mock-clock" id="lpClock">--:--:--</div>
+              <div class="lp-mock-idle-txt">正在监听通知</div>
+            </div>
+
             <!-- 通知铺满整块屏 = 教室大屏全屏播报 -->
-            <div class="lp-mock-ov">
+            <div class="lp-mock-ov" id="lpOv">
               <div class="lp-mock-ovhead">
                 <span class="lp-mock-ovtag">📢 三年级二班</span>
                 <span class="lp-mock-ovsub">教室大屏 · 全屏播报中</span>
               </div>
-              <div class="lp-mock-ovtext">请三年级二班同学<br>到操场集合</div>
+              <div class="lp-mock-ovtext" id="lpOvText">请三年级二班同学到操场集合</div>
               <div class="lp-mock-ovfoot">
-                <span class="lp-mock-src">来源：王老师 · 14:30</span>
+                <span class="lp-mock-src" id="lpSrc">来源：王老师 · 14:30</span>
                 <span class="lp-mock-voice">
                   <span class="lp-mock-wave"><i></i><i></i><i></i><i></i></span>
                   🔊 正在语音播报…
                 </span>
               </div>
             </div>
+
+            <!-- 播放键 -->
+            <button class="lp-mock-play" id="lpPlay" type="button" aria-label="就地播放演示">
+              <span class="lp-mock-play-ico">▶</span>
+              <span>播放演示（带声音）</span>
+            </button>
+
           </div>
           <div class="lp-mock-tvbase">
             <span>◉ CLASS DISPLAY · 65"</span>
@@ -199,6 +218,19 @@
   </div>
 </section>
 
+<!-- 亲手试一条 -->
+<section class="lp-sec" id="demo">
+  <div class="lp-wrap">
+    <div class="lp-demo">
+      <div class="lp-demo-txt">
+        <h2>自己发一条，比看演示更清楚</h2>
+        <p>上面那个是演示动画。想真发一句话、真看教室大屏弹出来？直接进临时环境——不用注册、不用留邮箱，30 秒上手，24 小时后自动清空。</p>
+      </div>
+      <a class="btn btn-pri lp-btn-lg" href="/try" data-ga="try_sandbox" data-ga-pos="demo">▷ 免注册体验</a>
+    </div>
+  </div>
+</section>
+
 <!-- 使用流程 -->
 <section class="lp-sec" id="how">
   <div class="lp-wrap">
@@ -209,8 +241,8 @@
     <ol class="lp-steps">
       <li>
         <span class="lp-step-n">1</span>
-        <h3>申请激活卡号</h3>
-        <p>填写联系邮箱<a href="#card">在线提交申请</a>，或发邮件到 <b class="mono">ladyiney25@gmail.com</b>。</p>
+        <h3>免费申请正式使用</h3>
+        <p>填写联系邮箱<a href="#card" data-ga="apply_full_access" data-ga-pos="how">在线提交申请</a>，1 个工作日内回复，拿到<b>正式卡号</b>即可长期使用。想先上手试试，可以<a href="/try" data-ga="try_sandbox" data-ga-pos="how">免注册体验</a>（临时环境，24 小时后清空）。</p>
       </li>
       <li>
         <span class="lp-step-n">2</span>
@@ -329,7 +361,7 @@
 <section class="lp-sec lp-sec-alt" id="price">
   <div class="lp-wrap">
     <div class="lp-sec-head">
-      <h2>卡号说明与申请</h2>
+      <h2>卡号说明与正式申请</h2>
       <p>系统按班级授权，一张卡对应一个账号，注册即生效。</p>
     </div>
     <div class="lp-price">
@@ -344,7 +376,7 @@
           <li>生成邀请码，拉任课老师协同</li>
           <li>通知历史留痕</li>
         </ul>
-        <a class="btn btn-pri btn-block" href="#card">申请普通激活卡</a>
+        <a class="btn btn-pri btn-block" href="#card" data-ga="apply_full_access" data-ga-pos="card">免费申请正式使用</a>
       </div>
       <div class="lp-plan">
         <div class="lp-plan-tag lp-plan-tag-gray">协同</div>
@@ -356,7 +388,7 @@
           <li>不需要自己新建班级</li>
           <li>与班主任共用同一块教室大屏</li>
         </ul>
-        <a class="btn btn-block" href="#card">申请协同授权码</a>
+        <a class="btn btn-block" href="#card" data-ga="apply_co_teacher_code" data-ga-pos="card">申请协同授权码</a>
       </div>
     </div>
     <p class="lp-price-note">
@@ -369,16 +401,18 @@
 <section class="lp-sec" id="card">
   <div class="lp-wrap lp-apply">
     <div class="lp-apply-txt">
-      <h2>免费申请激活卡号</h2>
+      <h2>免费申请正式使用</h2>
       <p>
-        填写联系邮箱提交申请，我们会把卡号发给你；也可以直接把申请发到邮箱
-        <b class="mono">ladyiney25@gmail.com</b>。
+        填一个联系邮箱就行，不用注册、不用填其他信息，我们会把<b>正式激活卡号</b>发给你，长期有效。
       </p>
       <ul class="lp-apply-tips">
-        <li>申请时写清：<b>你的联系邮箱</b></li>
-        <li>说明是<b>班主任 card</b> 还是<b>协同授权码</b>，我们好准备</li>
+        <li>只需填写<b>你的联系邮箱</b>，其他都不用填</li>
         <li>一般 <b>1 个工作日内</b>回复</li>
+        <li>收到的是<b>正式卡号</b>，不是 24 小时就清空的体验账号</li>
       </ul>
+      <p class="muted" style="font-size:13px;line-height:1.7;margin-top:2px">
+        只想先看看好不好用？<a href="/try" data-ga="try_sandbox" data-ga-pos="card">免注册在线体验</a>——不用留邮箱，但只是<b>临时演示环境</b>，24 小时后自动清空，不能长期使用。
+      </p>
       <div class="lp-apply-mail">
         <span>📧 申请邮箱</span>
         <b class="mono" id="lpMail">ladyiney25@gmail.com</b>
@@ -387,14 +421,11 @@
     </div>
 
     <div class="card lp-apply-form">
-      <h3>在线提交申请</h3>
+      <h3>填写邮箱，免费申请正式使用</h3>
       <label class="lbl">联系邮箱 *</label>
       <input class="inp" id="lpContact" type="email" placeholder="例如：teacher@example.com">
-      <label class="lbl">补充说明（选填）</label>
-      <textarea class="inp" id="lpNote" rows="3" maxlength="200" placeholder="例如：想申请 2 个班的卡；需要每日 8:00 自动播报"></textarea>
       <div style="height:14px"></div>
-      <button class="btn btn-pri btn-block" id="lpBtn" onclick="lpSubmit()">提交申请</button>
-      <button class="btn btn-block" style="margin-top:8px" onclick="lpMailto()">📧 改用邮箱发送申请</button>
+      <button class="btn btn-pri btn-block" id="lpBtn" onclick="lpSubmit()">提交申请，领取卡号</button>
       <p class="muted" style="font-size:12px;margin:10px 0 0;line-height:1.6" id="lpTip">
         已有卡号？直接去<a href="/login#reg">注册账号</a>。
       </p>
@@ -406,9 +437,10 @@
 <section class="lp-final">
   <div class="lp-wrap">
     <h2>给教室装一个「会说话的喇叭」</h2>
-    <p>申请一张激活卡号，今天就能用起来。</p>
+    <p>免费申请正式使用，1 个工作日内回复，拿到卡号即可长期使用。</p>
     <div class="lp-cta lp-cta-center">
-      <a class="btn btn-pri lp-btn-lg" href="#card">免费申请激活卡号</a>
+      <a class="btn btn-pri lp-btn-lg" href="#card" data-ga="apply_full_access" data-ga-pos="final">免费申请正式使用</a>
+      <a class="btn lp-btn-lg" href="/try" data-ga="try_sandbox" data-ga-pos="final">▷ 先免注册体验</a>
       <a class="btn lp-btn-lg" href="/login">登录后台</a>
     </div>
     <p class="lp-final-mail">
@@ -435,7 +467,6 @@ const LP_EMAIL = 'ladyiney25@gmail.com';
 function lpPayload() {
   return {
     contact: (document.getElementById('lpContact').value || '').trim(),
-    note: (document.getElementById('lpNote').value || '').trim(),
     lang: 'zh',
   };
 }
@@ -447,30 +478,175 @@ async function lpSubmit() {
   btn.disabled = true;
   try {
     await api('POST', '/api/card-request', p);
+    gaEvent('generate_lead', { method: 'card_request_form', lang: 'zh' });
     toast('申请已提交，我们会在 1 个工作日内联系你', 'ok');
     document.getElementById('lpTip').innerHTML =
-      '申请已收到 ✅ 我们会在 1 个工作日内联系你；也可以直接发邮件到 <b class="mono">' + LP_EMAIL + '</b>。已有卡号？去<a href="/login#reg">注册账号</a>。';
+      '申请已收到 ✅ 我们会在 1 个工作日内联系你。已有卡号？去<a href="/login#reg">注册账号</a>。';
   } catch (err) {
     toast(err.message, 'err');
   } finally { btn.disabled = false; }
-}
-
-function lpMailto() {
-  const p = lpPayload();
-  const subject = '申请激活卡号（班级喊话系统）';
-  const body = [
-    '你好，我想申请班级喊话系统的激活卡号。',
-    '',
-    '联系邮箱：' + (p.contact || '（请填写）'),
-    '补充说明：' + (p.note || '（无）'),
-  ].join('\n');
-  location.href = 'mailto:' + LP_EMAIL + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
 }
 
 async function lpCopyMail() {
   const ok = await copyText(LP_EMAIL);
   toast(ok ? '邮箱已复制：' + LP_EMAIL : '请手动复制：' + LP_EMAIL, ok ? 'ok' : 'err');
 }
+
+/* ---------- 首屏就地演示：打字机 → 光点 → 教室大屏弹窗（+ 可选语音） ---------- */
+(function lpHeroDemo() {
+  const mock = document.getElementById('lpMock');
+  if (!mock) return;
+
+  const input = document.getElementById('lpInput');
+  const sendBtn = document.getElementById('lpSend');
+  const spark = document.getElementById('lpSpark');
+  const idle = document.getElementById('lpIdle');
+  const clock = document.getElementById('lpClock');
+  const ovText = document.getElementById('lpOvText');
+  const src = document.getElementById('lpSrc');
+  const playBtn = document.getElementById('lpPlay');
+
+  const NOTES = [
+    { from: '王老师', text: '请三年级二班同学到操场集合' },
+    { from: '李老师', text: '下节课改到多媒体教室' },
+    { from: '班主任', text: '明天早上 8:00 准时到校' },
+  ];
+
+  const pad2 = (v) => String(v).padStart(2, '0');
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let gen = 0, running = false, cursor = 0, speakNext = false, voice = null;
+
+  /* 大屏时钟 */
+  function tick() {
+    const d = new Date();
+    clock.textContent = pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
+  }
+  tick();
+  setInterval(tick, 1000);
+
+  /* 语音：只有点 ▶ 才启用，避免自动播放打扰 */
+  function pickVoice() {
+    try {
+      const vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+      voice = vs.find((v) => /^zh[-_]CN/i.test(v.lang)) || vs.find((v) => /^zh/i.test(v.lang)) || null;
+    } catch (e) { voice = null; }
+  }
+  function speak(text) {
+    if (!window.speechSynthesis) return;
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'zh-CN';
+      u.rate = 1.05;
+      if (voice) u.voice = voice;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    } catch (e) { /* 忽略 */ }
+  }
+  if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+
+  /* 时序：gen 变化会立刻中断上一轮 */
+  function wait(ms) {
+    const my = gen;
+    return new Promise((res) => setTimeout(() => res(my === gen && running), ms));
+  }
+  async function typeInto(el, text) {
+    el.textContent = '';
+    for (let i = 1; i <= text.length; i++) {
+      if (!(await wait(72))) return false;
+      el.textContent = text.slice(0, i);
+    }
+    return true;
+  }
+  function showNotice(n) {
+    const d = new Date();
+    ovText.textContent = n.text;
+    src.textContent = '来源：' + n.from + ' · ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+    idle.classList.add('off');
+    mock.classList.add('playing');
+  }
+  function hideNotice() {
+    mock.classList.remove('playing');
+    idle.classList.remove('off');
+  }
+  function stop() {
+    running = false;
+    gen++;
+    try { speechSynthesis.cancel(); } catch (e) { /* 忽略 */ }
+  }
+
+  async function run() {
+    while (running) {
+      const n = NOTES[cursor++ % NOTES.length];
+      const sound = speakNext;
+      speakNext = false;
+      mock.classList.toggle('mute', !sound);
+
+      if (!(await typeInto(input, n.text))) return;
+      if (!(await wait(360))) return;
+
+      sendBtn.classList.add('on');
+      if (!(await wait(180))) return;
+      sendBtn.classList.remove('on');
+
+      spark.classList.remove('go');
+      void spark.offsetWidth;               // 强制重排，重启动画
+      spark.classList.add('go');
+      if (!(await wait(520))) return;
+
+      showNotice(n);
+      if (sound) speak(n.text);
+      if (!(await wait(4200))) return;
+
+      hideNotice();
+      if (!(await wait(820))) return;
+    }
+  }
+
+  function start(withSound) {
+    stop();
+    running = true;
+    cursor = 0;
+    speakNext = !!withSound;
+    mock.classList.toggle('mute', !withSound);
+    input.textContent = '';
+    hideNotice();
+    run();
+  }
+
+  /* 系统开了「减少动效」：静态摆一条通知，不播放 */
+  if (reduce) {
+    idle.style.display = 'none';
+    playBtn.style.display = 'none';
+    input.textContent = NOTES[0].text;
+    src.textContent = '来源：' + NOTES[0].from;
+    mock.classList.add('playing', 'mute');
+    return;
+  }
+
+  /* 滚到首屏就静音循环播放，先抓住注意力 */
+  let started = false;
+  function autoStart() {
+    if (started || running) return;
+    started = true;
+    start(false);
+  }
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (es) {
+      if (es[0].isIntersecting) autoStart();
+    }, { threshold: 0.3 }).observe(mock);
+  } else {
+    autoStart();
+  }
+
+  /* 点 ▶：开声音，从头完整播一遍 */
+  playBtn.addEventListener('click', function () {
+    try { speechSynthesis.resume(); } catch (e) { /* 忽略 */ }
+    pickVoice();
+    started = true;
+    start(true);
+  });
+})();
 </script>
 </body>
 </html>

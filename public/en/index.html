@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Class Broadcast System · Send from a browser, play full-screen in class</title>
-<meta name="description" content="Type a notice from your office or phone and it pops up full-screen on the classroom computer with voice. No app to install, no student devices — just a bind code. Request a free activation card.">
+<meta name="description" content="Type a notice from your office or phone and it pops up full-screen on the classroom computer with voice. No app to install, no student devices — just a bind code. Try it live with no sign-up, or apply for free full access.">
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/landing.css">
 </head>
@@ -26,13 +26,14 @@
       <a href="#price">Cards</a>
     </nav>
     <div class="lp-nav-act">
-      <span class="language-list">
-        <a href="/" title="简体中文">简体</a>
-        <a href="/zh-Hant/" title="繁體中文">繁體</a>
-        <a class="curr" href="/en/" title="English">English</a>
-      </span>
-      <a class="btn btn-sm" href="/en/login">Sign in</a>
-      <a class="btn btn-pri btn-sm" href="#card">Get a free card</a>
+      <select class="lang-select" title="Language" aria-label="Language" onchange="if(this.value)location.href=this.value">
+        <option value="/">简体</option>
+        <option value="/zh-Hant/">繁體</option>
+        <option value="/en/" selected>English</option>
+      </select>
+      <a class="btn btn-sm lp-hide-sm" href="/en/login" data-ga="sign_in" data-ga-pos="nav">Sign in</a>
+      <a class="btn btn-sm lp-hide-sm" href="/try?to=/en/app" data-ga="try_sandbox" data-ga-pos="nav">Try it live</a>
+      <a class="btn btn-pri btn-sm" href="#card" data-ga="apply_full_access" data-ga-pos="nav">Get full access — free</a>
     </div>
   </div>
 </header>
@@ -49,12 +50,13 @@
         internet is enough.
       </p>
       <div class="lp-cta">
-        <a class="btn btn-pri lp-btn-lg" href="#card">Get a free activation card</a>
-        <a class="btn lp-btn-lg" href="/en/login">I already have an account</a>
+        <a class="btn btn-pri lp-btn-lg" href="#card" data-ga="apply_full_access" data-ga-pos="hero">Get full access — free</a>
+        <a class="btn lp-btn-lg" href="/try?to=/en/app" data-ga="try_sandbox" data-ga-pos="hero">▷ Try it live (no sign-up)</a>
       </div>
       <p class="lp-cta-note">
-        How to request: enter your contact email in the <a href="#card">form</a>, or email
-        <b class="mono">ladyiney25@gmail.com</b>. We reply within 1 business day.
+        <b>Get full access — free</b>: leave your email to get a <b>real activation card</b> for long-term use. We reply within 1 business day.
+        <br><b>Try it live</b>: no sign-up, no email — you get a <b>temporary sandbox</b>, wiped after 24 hours, just to see how it works.
+        <br>Want to hear it? Hit <b>▶</b> on the screen to the right, or <a href="/try?to=/en/app" data-ga="try_sandbox" data-ga-pos="hero_note">open a live sandbox</a>. Already have an account? <a href="/en/login" data-ga="sign_in" data-ga-pos="hero_note">Sign in</a>.
       </p>
       <ul class="lp-trust">
         <li>✅ No install</li>
@@ -64,10 +66,10 @@
       </ul>
     </div>
 
-    <!-- Illustration: teacher console -> classroom display -->
-    <div class="lp-mock" aria-hidden="true">
+    <!-- Inline demo: teacher console -> classroom display (auto-loops muted; hit ▶ for voice) -->
+    <div class="lp-mock" id="lpMock">
 
-      <!-- 1. Teacher side -->
+      <!-- 1. Teacher side (office laptop / phone) -->
       <div class="lp-mock-console">
         <div class="lp-mock-bar">
           <span></span><span></span><span></span>
@@ -75,13 +77,16 @@
           <b>Connected</b>
         </div>
         <div class="lp-mock-body">
-          <div class="lp-mock-input">Grade 3 Class 2, please gather at the playground</div>
-          <div class="lp-mock-btn">Send 📢</div>
+          <div class="lp-mock-input" id="lpInput"></div>
+          <div class="lp-mock-btn" id="lpSend">Send 📢</div>
         </div>
       </div>
 
       <!-- 2. Delivery -->
-      <div class="lp-mock-link"><span>⚡ Delivered instantly</span></div>
+      <div class="lp-mock-link">
+        <span>⚡ Delivered instantly</span>
+        <i class="lp-mock-spark" id="lpSpark"></i>
+      </div>
 
       <!-- 3. The classroom: a display mounted on the wall -->
       <div class="lp-mock-room">
@@ -92,21 +97,35 @@
 
         <div class="lp-mock-tv">
           <div class="lp-mock-screen">
+
+            <!-- Idle: the display keeps a clock -->
+            <div class="lp-mock-idle" id="lpIdle">
+              <div class="lp-mock-clock" id="lpClock">--:--:--</div>
+              <div class="lp-mock-idle-txt">Listening for notices</div>
+            </div>
+
             <!-- The notice fills the whole panel = full-screen on the class display -->
-            <div class="lp-mock-ov">
+            <div class="lp-mock-ov" id="lpOv">
               <div class="lp-mock-ovhead">
                 <span class="lp-mock-ovtag">📢 Grade 3 Class 2</span>
                 <span class="lp-mock-ovsub">Full-screen on class display</span>
               </div>
-              <div class="lp-mock-ovtext">Grade 3 Class 2, please<br>gather at the playground</div>
+              <div class="lp-mock-ovtext" id="lpOvText">Grade 3 Class 2, please gather at the playground</div>
               <div class="lp-mock-ovfoot">
-                <span class="lp-mock-src">From: Ms. Wang · 14:30</span>
+                <span class="lp-mock-src" id="lpSrc">From: Ms. Wang · 14:30</span>
                 <span class="lp-mock-voice">
                   <span class="lp-mock-wave"><i></i><i></i><i></i><i></i></span>
                   🔊 Reading aloud…
                 </span>
               </div>
             </div>
+
+            <!-- Play button -->
+            <button class="lp-mock-play" id="lpPlay" type="button" aria-label="Play the demo inline">
+              <span class="lp-mock-play-ico">▶</span>
+              <span>Play demo (with sound)</span>
+            </button>
+
           </div>
           <div class="lp-mock-tvbase">
             <span>◉ CLASS DISPLAY · 65"</span>
@@ -202,6 +221,19 @@
   </div>
 </section>
 
+<!-- Live demo -->
+<section class="lp-sec" id="demo">
+  <div class="lp-wrap">
+    <div class="lp-demo">
+      <div class="lp-demo-txt">
+        <h2>Send one yourself — that beats watching</h2>
+        <p>The animation above is just a demo. Want to really send a notice and watch the classroom screen pop up? Step into the sandbox — no sign-up, no email, up and running in 30 seconds, wiped after 24 hours.</p>
+      </div>
+      <a class="btn btn-pri lp-btn-lg" href="/try?to=/en/app" data-ga="try_sandbox" data-ga-pos="demo">▷ Try it live (no sign-up)</a>
+    </div>
+  </div>
+</section>
+
 <!-- How it works -->
 <section class="lp-sec" id="how">
   <div class="lp-wrap">
@@ -212,8 +244,8 @@
     <ol class="lp-steps">
       <li>
         <span class="lp-step-n">1</span>
-        <h3>Request an activation card</h3>
-        <p><a href="#card">Submit the form</a> with your contact email, or email <b class="mono">ladyiney25@gmail.com</b>.</p>
+        <h3>Get full access — free</h3>
+        <p><a href="#card" data-ga="apply_full_access" data-ga-pos="how">Submit the form</a> with your contact email — we reply within 1 business day and you get a <b>real card</b> for long-term use. Want to poke around first? <a href="/try?to=/en/app" data-ga="try_sandbox" data-ga-pos="how">Try it live</a> (temporary sandbox, wiped after 24 hours).</p>
       </li>
       <li>
         <span class="lp-step-n">2</span>
@@ -332,7 +364,7 @@
 <section class="lp-sec lp-sec-alt" id="price">
   <div class="lp-wrap">
     <div class="lp-sec-head">
-      <h2>Activation cards</h2>
+      <h2>Cards &amp; full access</h2>
       <p>Access is granted per class. One card, one account, active the moment you register.</p>
     </div>
     <div class="lp-price">
@@ -347,7 +379,7 @@
           <li>Invite other teachers as co-teachers</li>
           <li>Keep a notice history</li>
         </ul>
-        <a class="btn btn-pri btn-block" href="#card">Request a standard card</a>
+        <a class="btn btn-pri btn-block" href="#card" data-ga="apply_full_access" data-ga-pos="card">Get full access — free</a>
       </div>
       <div class="lp-plan">
         <div class="lp-plan-tag lp-plan-tag-gray">Co-teacher</div>
@@ -359,7 +391,7 @@
           <li>No need to create your own class</li>
           <li>Share the same classroom screen</li>
         </ul>
-        <a class="btn btn-block" href="#card">Request a co-teacher code</a>
+        <a class="btn btn-block" href="#card" data-ga="apply_co_teacher_code" data-ga-pos="card">Request a co-teacher code</a>
       </div>
     </div>
     <p class="lp-price-note">
@@ -372,16 +404,18 @@
 <section class="lp-sec" id="card">
   <div class="lp-wrap lp-apply">
     <div class="lp-apply-txt">
-      <h2>Request a free activation card</h2>
+      <h2>Get full access — free</h2>
       <p>
-        Fill in your contact email and we will send you a card. You can also email your request
-        straight to <b class="mono">ladyiney25@gmail.com</b>.
+        Just leave your contact email — no sign-up, no other details needed — and we will send you a <b>real activation card</b> that keeps working long-term.
       </p>
       <ul class="lp-apply-tips">
-        <li>Please include: <b>your contact email</b></li>
-        <li>Tell us whether you need a <b>standard card</b> or a <b>co-teacher code</b></li>
+        <li>All you need is <b>your contact email</b></li>
         <li>We normally reply within <b>1 business day</b></li>
+        <li>You get a <b>real card</b>, not a demo account wiped after 24 hours</li>
       </ul>
+      <p class="muted" style="font-size:13px;line-height:1.7;margin-top:2px">
+        Just want to look around first? <a href="/try?to=/en/app" data-ga="try_sandbox" data-ga-pos="card">Try it live with no sign-up</a> — no email needed, but it is a <b>temporary sandbox</b>, wiped after 24 hours and not meant for long-term use.
+      </p>
       <div class="lp-apply-mail">
         <span>📧 Request email</span>
         <b class="mono" id="lpMail">ladyiney25@gmail.com</b>
@@ -390,14 +424,11 @@
     </div>
 
     <div class="card lp-apply-form">
-      <h3>Submit your request</h3>
+      <h3>Enter your email to get full access, free</h3>
       <label class="lbl">Contact email *</label>
       <input class="inp" id="lpContact" type="email" placeholder="e.g. teacher@example.com">
-      <label class="lbl">Anything else (optional)</label>
-      <textarea class="inp" id="lpNote" rows="3" maxlength="200" placeholder="e.g. Two classes please; a daily 8:00 broadcast"></textarea>
       <div style="height:14px"></div>
-      <button class="btn btn-pri btn-block" id="lpBtn" onclick="lpSubmit()">Submit request</button>
-      <button class="btn btn-block" style="margin-top:8px" onclick="lpMailto()">📧 Send by email instead</button>
+      <button class="btn btn-pri btn-block" id="lpBtn" onclick="lpSubmit()">Submit request, get my card</button>
       <p class="muted" style="font-size:12px;margin:10px 0 0;line-height:1.6" id="lpTip">
         Already have a card? Go straight to <a href="/en/login#reg">create your account</a>.
       </p>
@@ -409,9 +440,10 @@
 <section class="lp-final">
   <div class="lp-wrap">
     <h2>Give your classroom a voice</h2>
-    <p>Request an activation card and you can be broadcasting today.</p>
+    <p>Get full access — free. We reply within 1 business day and your card keeps working long-term.</p>
     <div class="lp-cta lp-cta-center">
-      <a class="btn btn-pri lp-btn-lg" href="#card">Get a free activation card</a>
+      <a class="btn btn-pri lp-btn-lg" href="#card" data-ga="apply_full_access" data-ga-pos="final">Get full access — free</a>
+      <a class="btn lp-btn-lg" href="/try?to=/en/app" data-ga="try_sandbox" data-ga-pos="final">▷ Try it live first</a>
       <a class="btn lp-btn-lg" href="/en/login">Sign in to the console</a>
     </div>
     <p class="lp-final-mail">
@@ -438,7 +470,6 @@ const LP_EMAIL = 'ladyiney25@gmail.com';
 function lpPayload() {
   return {
     contact: (document.getElementById('lpContact').value || '').trim(),
-    note: (document.getElementById('lpNote').value || '').trim(),
     lang: 'en',
   };
 }
@@ -450,30 +481,175 @@ async function lpSubmit() {
   btn.disabled = true;
   try {
     await api('POST', '/api/card-request', p);
+    gaEvent('generate_lead', { method: 'card_request_form', lang: 'en' });
     toast('Request received — we will get back to you within 1 business day', 'ok');
     document.getElementById('lpTip').innerHTML =
-      'Request received ✅ We will contact you within 1 business day. You can also email <b class="mono">' + LP_EMAIL + '</b>. Already have a card? <a href="/en/login#reg">Create your account</a>.';
+      'Request received ✅ We will contact you within 1 business day. Already have a card? <a href="/en/login#reg">Create your account</a>.';
   } catch (err) {
     toast(err.message, 'err');
   } finally { btn.disabled = false; }
-}
-
-function lpMailto() {
-  const p = lpPayload();
-  const subject = 'Activation card request (Class Broadcast System)';
-  const body = [
-    'Hello, I would like to request an activation card for the Class Broadcast System.',
-    '',
-    'Contact email: ' + (p.contact || '(please fill in)'),
-    'Notes: ' + (p.note || '(none)'),
-  ].join('\n');
-  location.href = 'mailto:' + LP_EMAIL + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
 }
 
 async function lpCopyMail() {
   const ok = await copyText(LP_EMAIL);
   toast(ok ? 'Email copied: ' + LP_EMAIL : 'Please copy manually: ' + LP_EMAIL, ok ? 'ok' : 'err');
 }
+
+/* ---------- Hero inline demo: typewriter → spark → full-screen notice (+ optional voice) ---------- */
+(function lpHeroDemo() {
+  const mock = document.getElementById('lpMock');
+  if (!mock) return;
+
+  const input = document.getElementById('lpInput');
+  const sendBtn = document.getElementById('lpSend');
+  const spark = document.getElementById('lpSpark');
+  const idle = document.getElementById('lpIdle');
+  const clock = document.getElementById('lpClock');
+  const ovText = document.getElementById('lpOvText');
+  const src = document.getElementById('lpSrc');
+  const playBtn = document.getElementById('lpPlay');
+
+  const NOTES = [
+    { from: 'Ms. Wang', text: 'Grade 3 Class 2, please gather at the playground' },
+    { from: 'Mr. Li', text: 'Next period moves to the multimedia room' },
+    { from: 'Homeroom teacher', text: 'Be at school by 8:00 tomorrow morning' },
+  ];
+
+  const pad2 = (v) => String(v).padStart(2, '0');
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let gen = 0, running = false, cursor = 0, speakNext = false, voice = null;
+
+  /* Display clock */
+  function tick() {
+    const d = new Date();
+    clock.textContent = pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
+  }
+  tick();
+  setInterval(tick, 1000);
+
+  /* Voice: turned on only after the user hits ▶, so nothing autoplays */
+  function pickVoice() {
+    try {
+      const vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+      voice = vs.find((v) => /^en[-_]US/i.test(v.lang)) || vs.find((v) => /^en/i.test(v.lang)) || null;
+    } catch (e) { voice = null; }
+  }
+  function speak(text) {
+    if (!window.speechSynthesis) return;
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'en-US';
+      u.rate = 1.05;
+      if (voice) u.voice = voice;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    } catch (e) { /* ignore */ }
+  }
+  if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+
+  /* Timing: bumping gen aborts the previous round immediately */
+  function wait(ms) {
+    const my = gen;
+    return new Promise((res) => setTimeout(() => res(my === gen && running), ms));
+  }
+  async function typeInto(el, text) {
+    el.textContent = '';
+    for (let i = 1; i <= text.length; i++) {
+      if (!(await wait(45))) return false;   // English needs a faster key rate than CJK
+      el.textContent = text.slice(0, i);
+    }
+    return true;
+  }
+  function showNotice(n) {
+    const d = new Date();
+    ovText.textContent = n.text;
+    src.textContent = 'From: ' + n.from + ' · ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+    idle.classList.add('off');
+    mock.classList.add('playing');
+  }
+  function hideNotice() {
+    mock.classList.remove('playing');
+    idle.classList.remove('off');
+  }
+  function stop() {
+    running = false;
+    gen++;
+    try { speechSynthesis.cancel(); } catch (e) { /* ignore */ }
+  }
+
+  async function run() {
+    while (running) {
+      const n = NOTES[cursor++ % NOTES.length];
+      const sound = speakNext;
+      speakNext = false;
+      mock.classList.toggle('mute', !sound);
+
+      if (!(await typeInto(input, n.text))) return;
+      if (!(await wait(360))) return;
+
+      sendBtn.classList.add('on');
+      if (!(await wait(180))) return;
+      sendBtn.classList.remove('on');
+
+      spark.classList.remove('go');
+      void spark.offsetWidth;               // force reflow so the animation restarts
+      spark.classList.add('go');
+      if (!(await wait(520))) return;
+
+      showNotice(n);
+      if (sound) speak(n.text);
+      if (!(await wait(4200))) return;
+
+      hideNotice();
+      if (!(await wait(820))) return;
+    }
+  }
+
+  function start(withSound) {
+    stop();
+    running = true;
+    cursor = 0;
+    speakNext = !!withSound;
+    mock.classList.toggle('mute', !withSound);
+    input.textContent = '';
+    hideNotice();
+    run();
+  }
+
+  /* prefers-reduced-motion: pin one static notice, no animation */
+  if (reduce) {
+    idle.style.display = 'none';
+    playBtn.style.display = 'none';
+    input.textContent = NOTES[0].text;
+    src.textContent = 'From: ' + NOTES[0].from;
+    mock.classList.add('playing', 'mute');
+    return;
+  }
+
+  /* Start looping muted once the hero scrolls into view, to catch the eye */
+  let started = false;
+  function autoStart() {
+    if (started || running) return;
+    started = true;
+    start(false);
+  }
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (es) {
+      if (es[0].isIntersecting) autoStart();
+    }, { threshold: 0.3 }).observe(mock);
+  } else {
+    autoStart();
+  }
+
+  /* Hit ▶: turn the sound on and replay from the top */
+  playBtn.addEventListener('click', function () {
+    try { speechSynthesis.resume(); } catch (e) { /* ignore */ }
+    pickVoice();
+    started = true;
+    start(true);
+  });
+})();
 </script>
 </body>
 </html>

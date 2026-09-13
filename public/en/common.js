@@ -71,9 +71,20 @@ async function copyText(t) {
    once gtag.js loads. */
 (function () {
   var GA_ID = 'G-ZNQCX7BSM0';
+  var HOST = location.hostname;
+  var isLocal = !HOST || HOST === 'localhost' || HOST === '127.0.0.1'
+    || /^192\.168\./.test(HOST) || /^10\./.test(HOST) || /\.local$/i.test(HOST);
+  /* GA4 is not loaded on localhost / LAN by default so debug traffic cannot pollute
+     the stats. To verify tracking locally, open the page with ?ga=1,
+     e.g. http://localhost:3000/en/?ga=1 */
+  var on = !isLocal || /[?&]ga=1/.test(location.search);
+
   if (window.gtag) return;                                   // already injected
   window.dataLayer = window.dataLayer || [];
-  window.gtag = function () { window.dataLayer.push(arguments); };
+  window.gtag = on ? function () { window.dataLayer.push(arguments); } : function () {};
+
+  if (!on) return;
+
   window.gtag('js', new Date());
   window.gtag('config', GA_ID);
   var s = document.createElement('script');
@@ -81,3 +92,29 @@ async function copyText(t) {
   s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
   document.head.appendChild(s);
 })();
+
+/* ---------- Button click tracking ---------- */
+/* Event delegation: any element carrying data-ga="event_name" (plus an optional
+   data-ga-pos="position") is reported on click — no onclick needed per button.
+   lang / page_path ride along so you can break results down per site and page. */
+(function () {
+  document.addEventListener('click', function (e) {
+    var el = e.target && e.target.closest ? e.target.closest('[data-ga]') : null;
+    if (!el) return;
+    var params = {
+      position: el.getAttribute('data-ga-pos') || 'unknown',
+      lang: document.documentElement.lang || 'en',
+      page_path: location.pathname
+    };
+    var ctx = window.GA_CTX;   // context injected by the page (e.g. the trial flag); merged in when present
+    if (ctx) for (var k in ctx) {
+      if (Object.prototype.hasOwnProperty.call(ctx, k)) params[k] = ctx[k];
+    }
+    window.gtag('event', el.getAttribute('data-ga'), params);
+  }, true);
+})();
+
+/* Entry point for events the page fires itself (e.g. a successful form submit) */
+function gaEvent(name, params) {
+  try { window.gtag('event', name, params || {}); } catch (e) { /* ignore */ }
+}

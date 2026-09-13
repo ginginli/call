@@ -96,7 +96,9 @@ body.lp a { color: inherit; }
 .lp-mock-btn {
   flex: 0 0 auto; font-size: 11.5px; font-weight: 700; color: #fff;
   background: var(--grad); border-radius: 8px; padding: 9px 13px; white-space: nowrap;
+  transition: transform .14s, box-shadow .14s;
 }
+.lp-mock-btn.on { transform: scale(.93); box-shadow: 0 0 0 6px rgba(124, 58, 237, .2); }
 
 /* ② 传输线 */
 .lp-mock-link { position: relative; height: 46px; display: grid; place-items: center; }
@@ -138,7 +140,12 @@ body.lp a { color: inherit; }
 }
 
 /* 大屏上的全屏通知：铺满整块屏，一眼就是"全屏播报" */
-.lp-mock-ov { position: absolute; inset: 0; display: flex; flex-direction: column; }
+.lp-mock-ov {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  opacity: 0; transform: scale(.97);
+  transition: opacity .32s ease, transform .32s ease;
+}
+.lp-mock.playing .lp-mock-ov { opacity: 1; transform: none; }
 .lp-mock-ovhead {
   display: flex; align-items: center; gap: 8px;
   background: var(--danger); color: #fff; padding: 7px 12px;
@@ -189,6 +196,52 @@ body.lp a { color: inherit; }
   width: 8%; height: 16px; border-radius: 3px 3px 0 0;
   background: linear-gradient(180deg, #b9c3dd, #a6b1cf);
 }
+
+/* ---------------- 首屏就地演示：待机 / 播放键 / 传输光点 ---------------- */
+/* 待机层：大屏上的时钟，通知弹出时淡出 */
+.lp-mock-idle {
+  position: absolute; inset: 0; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px;
+  transition: opacity .3s;
+}
+.lp-mock-idle.off { opacity: 0; }
+.lp-mock-clock {
+  font-size: 27px; font-weight: 300; letter-spacing: 3px; color: #a5b4fc;
+  font-variant-numeric: tabular-nums;
+}
+.lp-mock-idle-txt { font-size: 10px; font-weight: 700; letter-spacing: 4px; color: #5f6b8c; }
+
+/* 播放键：压在大屏正中，开播后淡出 */
+.lp-mock-play {
+  position: absolute; inset: 0; z-index: 5; margin: auto;
+  width: max-content; height: max-content;
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: inherit; font-size: 11.5px; font-weight: 700; color: #fff; cursor: pointer;
+  background: rgba(20, 24, 45, .74); border: 1px solid rgba(255, 255, 255, .26);
+  border-radius: 999px; padding: 9px 16px;
+  transition: opacity .25s, transform .25s, background .18s;
+}
+.lp-mock-play:hover { background: rgba(30, 36, 66, .92); transform: scale(1.05); }
+.lp-mock.playing .lp-mock-play { opacity: 0; pointer-events: none; }
+.lp-mock-play-ico { font-size: 9px; }
+
+/* 静音播放时藏起语音波形（画面里没有声音，不该显示"正在语音播报"） */
+.lp-mock.mute .lp-mock-voice { visibility: hidden; }
+
+/* 传输光点：从老师端飞向教室大屏 */
+.lp-mock-spark {
+  position: absolute; left: 50%; top: 0; margin-left: -4px; z-index: 3;
+  width: 8px; height: 8px; border-radius: 50%; opacity: 0;
+  background: #8b9cf7; box-shadow: 0 0 12px 4px rgba(124, 58, 237, .55);
+}
+.lp-mock-spark.go { animation: lpSpark .55s cubic-bezier(.4, 0, .3, 1) forwards; }
+@keyframes lpSpark {
+  0%   { opacity: 0; transform: translateY(2px) scale(.6); }
+  15%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(36px) scale(1.1); }
+}
+@media (prefers-reduced-motion: reduce) { .lp-mock-spark { display: none; } }
 
 /* ---------------- 功能卡 ---------------- */
 .lp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
@@ -322,7 +375,8 @@ body.lp a { color: inherit; }
   .lp-sec-head h2, .lp-apply-txt h2 { font-size: 24px; }
   .lp-hero h1 { font-size: 29px; letter-spacing: -.6px; }
   .lp-grid, .lp-steps, .lp-price { grid-template-columns: 1fr; }
-  .lp-nav-act .language-list { display: none; }
+  .lp-nav-act .lang-select { max-width: 92px; }
+  .lp-nav-act .lp-hide-sm { display: none; }
   .lp-logo span:last-child { display: none; }
   .lp-final h2 { font-size: 24px; }
   .lp-mock { max-width: 100%; }
@@ -331,4 +385,26 @@ body.lp a { color: inherit; }
   .lp-mock-ovtext { font-size: 16px; }
   .lp-mock-ovsub { display: none; }
   .lp-mock-desks { left: 14px; right: 14px; }
+}
+
+/* ---------------- 在线演示入口横幅 ---------------- */
+.lp-demo {
+  display: flex; align-items: center; gap: 26px; flex-wrap: wrap;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed 58%, #9333ea);
+  border-radius: 20px; padding: 32px 36px; color: #fff;
+  box-shadow: 0 18px 46px rgba(79, 70, 229, .28);
+}
+.lp-demo-txt { flex: 1; min-width: 260px; }
+.lp-demo-txt h2 { margin: 0 0 9px; font-size: 25px; letter-spacing: -.3px; }
+.lp-demo-txt p { margin: 0; color: rgba(255, 255, 255, .88); font-size: 15px; line-height: 1.75; }
+.lp-demo .btn-pri {
+  flex: none; background: #fff; color: var(--pri); border-color: #fff;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .18);
+}
+.lp-demo .btn-pri:hover { background: #f2f3ff; filter: none; }
+
+@media (max-width: 640px) {
+  .lp-demo { padding: 26px 22px; gap: 18px; }
+  .lp-demo-txt h2 { font-size: 21px; }
+  .lp-demo .btn-pri { width: 100%; text-align: center; }
 }

@@ -70,9 +70,19 @@ async function copyText(t) {
    不会阻塞页面渲染; gtag.js 加载成功后才真正上报。 */
 (function () {
   var GA_ID = 'G-ZNQCX7BSM0';
+  var HOST = location.hostname;
+  var isLocal = !HOST || HOST === 'localhost' || HOST === '127.0.0.1'
+    || /^192\.168\./.test(HOST) || /^10\./.test(HOST) || /\.local$/i.test(HOST);
+  /* 本地/内网默认不加载 GA4, 免得调试流量污染统计;
+     想在本地验证埋点, 用 ?ga=1 打开, 例如 http://localhost:3000/?ga=1 */
+  var on = !isLocal || /[?&]ga=1/.test(location.search);
+
   if (window.gtag) return;                                   // 已注入过就不重复
   window.dataLayer = window.dataLayer || [];
-  window.gtag = function () { window.dataLayer.push(arguments); };
+  window.gtag = on ? function () { window.dataLayer.push(arguments); } : function () {};
+
+  if (!on) return;
+
   window.gtag('js', new Date());
   window.gtag('config', GA_ID);
   var s = document.createElement('script');
@@ -80,3 +90,28 @@ async function copyText(t) {
   s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
   document.head.appendChild(s);
 })();
+
+/* ---------- 按钮点击埋点 ---------- */
+/* 事件委托: 元素上写 data-ga="事件名"(可选 data-ga-pos="位置") 就会被上报,
+   不用给每个按钮挂 onclick。附带 lang / page_path, 方便按语言站和页面拆开看。 */
+(function () {
+  document.addEventListener('click', function (e) {
+    var el = e.target && e.target.closest ? e.target.closest('[data-ga]') : null;
+    if (!el) return;
+    var params = {
+      position: el.getAttribute('data-ga-pos') || 'unknown',
+      lang: document.documentElement.lang || 'zh-CN',
+      page_path: location.pathname
+    };
+    var ctx = window.GA_CTX;   // 页面注入的上下文(如体验账号标志), 有就一并上报
+    if (ctx) for (var k in ctx) {
+      if (Object.prototype.hasOwnProperty.call(ctx, k)) params[k] = ctx[k];
+    }
+    window.gtag('event', el.getAttribute('data-ga'), params);
+  }, true);
+})();
+
+/* 页面自己触发的埋点入口(如表单提交成功) */
+function gaEvent(name, params) {
+  try { window.gtag('event', name, params || {}); } catch (e) { /* 忽略 */ }
+}

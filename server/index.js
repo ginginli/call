@@ -37,6 +37,7 @@ const PORT = Number(process.env.PORT || 3000);
 const ADMIN_KEY = process.env.CARD_KEY || 'siyunx-admin'; // 模拟"客服发卡"口令
 const CARD_REQUEST_EMAIL = process.env.CARD_EMAIL || 'ladyiney25@gmail.com'; // 申请激活卡号收件邮箱
 const SHOW_DEMO = process.env.DEMO !== 'off';
+const TRIAL_ON = process.env.TRIAL !== 'off'; // 免注册「一键体验」入口, 正式上线可用 TRIAL=off 关闭
 const SESSION_TTL = 30 * 24 * 3600 * 1000;
 const CODE_SET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
@@ -71,7 +72,10 @@ function findCard(raw) {
   return db.cards.find((x) => x.code === c);
 }
 function publicUser(u) {
-  return { id: u.id, username: u.username, type: u.type, classLimit: u.classLimit || 0, createdAt: u.createdAt };
+  return {
+    id: u.id, username: u.username, type: u.type,
+    classLimit: u.classLimit || 0, trial: !!u.trial, createdAt: u.createdAt,
+  };
 }
 function newSession(uid) {
   const token = crypto.randomBytes(24).toString('hex');
@@ -257,6 +261,87 @@ app.get('/api/auth/demo-cards', (req, res) => {
   const cards = db.cards.filter((c) => !c.usedBy).slice(0, 12).map((c) => ({ code: c.code, type: c.type }));
   res.json({ cards });
 });
+
+/* ---- 免注册「一键体验」 ----
+   打开 /try 当场生成一个独立体验账号 + 一个体验班级(随机绑定码) + 两条示例通知,
+   直接写会话并跳进后台。与演示账号 demo 的区别: 每位访客互相隔离, 24 小时后自动清理。
+   正式上线若不希望开放, 设 TRIAL=off(与 DEMO 开关相互独立)。 */
+const TRIAL_TTL = 24 * 3600 * 1000;   // 体验账号存活时长
+const TRIAL_PER_HOUR = 5;             // 同一 IP 每小时最多开几个体验账号
+const trialHits = new Map();          // ip -> [开通时间戳]
+
+function trialRateOk(ip) {
+  const now = Date.now();
+  const hits = (trialHits.get(ip) || []).filter((t) => now - t < 3600 * 1000);
+  if (hits.length >= TRIAL_PER_HOUR) return false;
+  hits.push(now);
+  trialHits.set(ip, hits);
+  return true;
+}
+
+app.get('/try', (req, res) => {
+  // 语言站(/en/、/zh-Hant/)会带 ?to=/en/app, 体验完仍回到对应语言的后台
+  const q = String(req.query.to || '');
+  const to = /^\/(?:en|zh-Hant)\/app$/.test(q) ? q : '/app';
+  if (!TRIAL_ON) return res.redirect(to.replace(/\/app$/, '/login'));
+  // 已登录(含已开过体验账号)就不重复创建, 直接回后台
+  if (uidFromReq(req)) return res.redirect(to);
+  if (!trialRateOk(clientIp(req))) return res.redirect(to.replace(/\/app$/, '/login?trial=busy'));
+
+  let name;
+  do { name = '访客' + rnd(4); } while (findUserByName(name));
+
+  const salt = crypto.randomBytes(8).toString('hex');
+  const user = {
+    id: nextId('u'), username: name, type: 'owner', classLimit: 1,
+    salt, hash: hashPw(rnd(16), salt), cardCode: '',
+    trial: true, trialExpireAt: new Date(Date.now() + TRIAL_TTL).toISOString(),
+    createdAt: nowISO(),
+  };
+  db.users.push(user);
+
+  const cls = {
+    id: nextId('cl'), ownerId: user.id, name: '我的体验班级', color: '#e11d48',
+    bindCode: uniqueBindCode(), memberIds: [], createdAt: nowISO(),
+  };
+  db.classes.push(cls);
+
+  // 预置两条通知, 让后台不是一片空白, 也顺便把"长什么样"演示给用户
+  [
+    '欢迎体验：在右侧输入一句话，点「发送通知」试试',
+    '教室端绑定后会立刻全屏弹出，并语音播报这条通知',
+  ].forEach((content, i) => {
+    db.notifications.push({
+      id: nextId('nt'), classId: cls.id, className: cls.name,
+      content, voice: false, color: cls.color,
+      fromId: user.id, fromName: '体验助手',
+      delivered: false, duration: 0, trial: true,
+      createdAt: new Date(Date.now() - (2 - i) * 60000).toISOString(),
+    });
+  });
+
+  persist();
+  const token = newSession(user.id);
+  res.cookie('sid', token, { httpOnly: true, sameSite: 'lax', maxAge: SESSION_TTL, path: '/' });
+  res.redirect(to);
+});
+
+/* 每小时清理一次过期的体验账号(连带它的班级 / 通知 / 定时任务 / 邀请) */
+function cleanTrials() {
+  const now = Date.now();
+  const dead = db.users.filter((u) => u.trial && u.trialExpireAt && Date.parse(u.trialExpireAt) < now);
+  if (!dead.length) return;
+  const uids = new Set(dead.map((u) => u.id));
+  const cids = new Set(db.classes.filter((c) => uids.has(c.ownerId)).map((c) => c.id));
+  db.users = db.users.filter((u) => !uids.has(u.id));
+  db.classes = db.classes.filter((c) => !cids.has(c.id));
+  db.notifications = db.notifications.filter((n) => !cids.has(n.classId));
+  db.jobs = db.jobs.filter((j) => !cids.has(j.classId));
+  db.invites = db.invites.filter((i) => !cids.has(i.classId));
+  sessions.forEach((s, k) => { if (uids.has(s.uid)) sessions.delete(k); });
+  persist();
+  console.log(`· 已清理 ${dead.length} 个过期体验账号`);
+}
 
 /* ---- 激活卡号申请(落地页 / 注册页提交, 无需登录) ---- */
 /* 页面语言: zh=简体 / zh-Hant=繁體 / en=English */
@@ -903,11 +988,16 @@ httpServer.listen(PORT, () => {
   console.log('  班级喊话系统 · 服务已启动');
   setInterval(tickJobs, 10000); // 定时喊话调度
   tickJobs();
+  setInterval(cleanTrials, 3600 * 1000); // 过期体验账号清理
+  cleanTrials();
   console.log(`  网页端(老师端): http://localhost:${PORT}/`);
   console.log(`  后台管理:       http://localhost:${PORT}/app`);
   console.log(`  教室端(教室电脑): http://localhost:${PORT}/room`);
   console.log('');
   console.log(`  演示账号: demo / demo123 · 演示绑定码 DEMO8YQZ`);
+  console.log(TRIAL_ON
+    ? `  一键体验:       http://localhost:${PORT}/try  (免注册, 24 小时后自动清理)`
+    : '  一键体验:       已关闭 (TRIAL=off)');
   console.log(`  客服发卡接口口令(CARD_KEY): ${ADMIN_KEY}  (POST /api/cards/generate)`);
   const ms = mailStatus();
   console.log(ms.configured

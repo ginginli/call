@@ -61,7 +61,7 @@ curl -X POST http://localhost:3000/api/cards/generate \
 2. 选择卡类型(普通激活卡 / 协同授权码)和数量(1~50),点「生成卡号」;
 3. 生成的卡号可单个复制或「复制全部」,发给老师即可。
 
-> 安全提醒:口令务必通过环境变量 `CARD_KEY` 改掉默认值;不对外演示时建议用 `DEMO=off` 关闭演示卡接口 `/api/auth/demo-cards`(它会把未使用的卡号列出来)。
+> 安全提醒:口令务必通过环境变量 `CARD_KEY` 改掉默认值;不对外演示时建议用 `DEMO=off` 关闭演示卡接口 `/api/auth/demo-cards`(它会把未使用的卡号列出来)。`TRIAL=off` 可单独关闭免注册体验入口 `/try`。
 
 ## 申请通知邮件
 
@@ -124,7 +124,7 @@ sudo bash deploy.sh https callclass.site
 ## 数据与配置
 
 - 数据存于 `data/db.json`(首次运行自动生成),删除该文件即重置
-- 环境变量:`PORT`(默认 3000)、`CARD_KEY`、`DEMO=off` 关闭演示种子/演示卡;邮件通知见上一节;`PUBLIC_BASE_URL` 固定邮件里的站点链接(HTTPS 一节会写入)
+- 环境变量:`PORT`(默认 3000)、`CARD_KEY`、`DEMO=off` 关闭演示种子/演示卡、`TRIAL=off` 关闭免注册一键体验;邮件通知见上一节;`PUBLIC_BASE_URL` 固定邮件里的站点链接(HTTPS 一节会写入)
 - 早期版本用过的 `SMTP_*`、`RESEND_API_KEY`、`MAIL_WEBHOOK_URL` 已废弃(发信只走 EmailJS),留在 `.env` 里不生效也不报错;服务器上每次执行 `bash deploy.sh` 都会自动清掉,清理前留一份 `.env.legacy.bak`
 
 ## 目录
