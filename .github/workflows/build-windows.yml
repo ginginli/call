@@ -10,7 +10,6 @@ on:
 
 jobs:
   build:
-    # windows-latest: 原生 Windows 环境, 无需 wine 即可 cross-compile, 也避免了 Ubuntu 上 wine 安装包巨大/慢的麻烦
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -25,17 +24,37 @@ jobs:
     defaults:
       run:
         working-directory: mac-screen
-        # Windows runner 默认是 pwsh, GitHub Actions 自动选择, 这里不用显式指定 shell
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      # --no-save: 不动 package.json / lockfile, 仅在 CI 临时按矩阵装对应 electron 版本
       - name: Install dependencies (electron ${{ matrix.electron }} + electron-builder)
         run: npm install --no-save --no-audit --no-fund electron@${{ matrix.electron }} electron-builder@^26.15.3
-      - name: Build ${{ matrix.label }} portable
-        run: npx --no-install electron-builder --win portable --x64
+
+      # 诊断 step: 上一次失败原因是 exit code 1 但日志空, 加前置探针确认 cwd / 文件 / 版本 / icon
+      - name: Build ${{ matrix.label }} portable (with diagnostics)
+        shell: bash
+        run: |
+          set +e
+          echo "=== pwd ==="
+          pwd
+          echo "=== ls (top of mac-screen) ==="
+          ls -la
+          echo "=== package.json ==="
+          cat package.json
+          echo "=== build/ dir (icon?) ==="
+          ls -la build/ 2>&1 || echo "(no build/ dir)"
+          echo "=== electron --version ==="
+          npx --no-install electron --version
+          echo "=== electron-builder --version ==="
+          npx --no-install electron-builder --version
+          echo "=== run electron-builder ==="
+          npx --no-install electron-builder --win portable --x64
+          rc=$?
+          echo "=== exit: $rc ==="
+          exit $rc
+
       - uses: actions/upload-artifact@v4
         with:
           name: class-call-screen-${{ matrix.target }}-x64
