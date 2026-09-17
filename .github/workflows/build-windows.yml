@@ -1,0 +1,42 @@
+name: build-windows
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mac-screen/**'
+      - '.github/workflows/build-windows.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: win7
+            electron: ^22.3.27
+            label: Win7 x64 (Electron 22.3.27 · 最后支持 Win7 的版本)
+          - target: latest
+            electron: ^44.2.0
+            label: Win10/11 x64 (Electron 44.x · 当前版本)
+    defaults:
+      run:
+        working-directory: mac-screen
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # --no-save: 不改 package.json / lockfile, 仅在 CI 临时按矩阵装对应版本的 electron
+      - name: Install dependencies (electron ${{ matrix.electron }} + electron-builder)
+        run: npm install --no-save --no-audit --no-fund electron@${{ matrix.electron }} electron-builder@^26.15.3
+      - name: Build ${{ matrix.label }} portable
+        run: npx --no-install electron-builder --win portable --x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: class-call-screen-${{ matrix.target }}-x64
+          path: mac-screen/dist/*.exe
+          if-no-files-found: error
+          retention-days: 14
