@@ -10,7 +10,8 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # windows-latest: 原生 Windows 环境, 无需 wine 即可 cross-compile, 也避免了 Ubuntu 上 wine 安装包巨大/慢的麻烦
+    runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
@@ -24,12 +25,13 @@ jobs:
     defaults:
       run:
         working-directory: mac-screen
+        # Windows runner 默认是 pwsh, GitHub Actions 自动选择, 这里不用显式指定 shell
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      # --no-save: 不改 package.json / lockfile, 仅在 CI 临时按矩阵装对应版本的 electron
+      # --no-save: 不动 package.json / lockfile, 仅在 CI 临时按矩阵装对应 electron 版本
       - name: Install dependencies (electron ${{ matrix.electron }} + electron-builder)
         run: npm install --no-save --no-audit --no-fund electron@${{ matrix.electron }} electron-builder@^26.15.3
       - name: Build ${{ matrix.label }} portable
