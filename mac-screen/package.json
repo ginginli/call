@@ -10,7 +10,7 @@
     "dist:mac": "electron-builder --mac dir",
     "dist:win": "electron-builder --win portable"
   },
-  "author": "",
+  "author": "Gingin Li <ljjy02@163.com>",
   "license": "MIT",
   "build": {
     "appId": "xyz.siyunx.call.screen",
