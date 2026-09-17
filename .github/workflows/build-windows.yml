@@ -58,3 +58,19 @@ jobs:
           path: mac-screen/build.log
           if-no-files-found: ignore
           retention-days: 7
+
+  bundle-win7-deps:
+    name: Bundle Win7 offline deps (VC++ + 3 KB MSU)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download VC++ + 3 KB MSU + write install.bat + zip
+        shell: pwsh
+        run: ./mac-screen/scripts/bundle-win7-deps.ps1
+      - name: Upload Win7 offline deps bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: class-call-screen-win7-deps
+          path: mac-screen/win7-deps.zip
+          if-no-files-found: error
+          retention-days: 90
