@@ -33,11 +33,14 @@
     "win": {
       "target": [
         "portable"
+      ],
+      "arch": [
+        "x64"
       ]
     }
   },
   "devDependencies": {
-    "electron": "^44.2.0",
+    "electron": "^22.3.27",
     "electron-builder": "^26.15.3"
   }
 }
