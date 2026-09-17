@@ -25,18 +25,8 @@
       "package.json"
     ],
     "mac": {
-      "target": [
-        "dir"
-      ],
+      "target": "dir",
       "category": "public.app-category.education"
-    },
-    "win": {
-      "target": [
-        "portable"
-      ],
-      "arch": [
-        "x64"
-      ]
     }
   },
   "devDependencies": {
