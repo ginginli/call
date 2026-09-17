@@ -1,97 +1,67 @@
 # 在 GitHub Actions windows-latest runner 上跑。
-# 作用: 从微软官方下载 VC++ 2015-2022 x64 + 3 个 KB MSU,
+# 作用: 从微软官方固定直链下载 VC++ 2015-2022 x64 + 3 个 KB MSU,
 #       配 install.bat 一键安装脚本, 打成 win7-deps.zip,
 #       用户一次下载即可在 Win7 SP1 上部署 班级喊话演示屏。
 #
-# 输出:
-#   mac-screen/win7-deps/   (中间目录)
-#   mac-screen/win7-deps.zip (最终产物, 由 workflow 上传为 artifact)
+# 所有 URL 均为微软官方长期稳定直链 (catalog.s.download.windowsupdate.com),
+# 已逐一验证可用 (2026-09-17)。
 
 $ErrorActionPreference = 'Stop'
 
-# 切到仓库根 (脚本在 mac-screen/scripts/ 下)
+# 切到 mac-screen/ (脚本在 mac-screen/scripts/ 下)
 Set-Location (Join-Path $PSScriptRoot '..')
 
 $outDir = Join-Path (Get-Location) 'win7-deps'
 if (-not (Test-Path $outDir)) { New-Item -ItemType Directory -Force -Path $outDir | Out-Null }
 
 # ------------------------------------------------------------------
-# 1. VC++ 2015-2022 x64 (微软官方分发, aka.ms 直链)
+# 固定直链清单 (微软官方)
 # ------------------------------------------------------------------
-Write-Host "== [1/4] VC++ 2015-2022 x64 =="
-$vcUrl = 'https://aka.ms/vs/17/release/vc_redist.x64.exe'
-$vcPath = Join-Path $outDir 'vc_redist.x64.exe'
-Invoke-WebRequest -Uri $vcUrl -OutFile $vcPath -UseBasicParsing -TimeoutSec 60
-Write-Host ("    -> {0} ({1:N0} bytes)" -f $vcPath, (Get-Item $vcPath).Length)
-
-# ------------------------------------------------------------------
-# 2-4. 3 个 KB MSU (通过 Microsoft Update Catalog v2 API 拉直链)
-# ------------------------------------------------------------------
-function Get-MsuInfo {
-    param([string]$Query)
-
-    # 优先: v2 API (POST JSON)
-    try {
-        $apiUrl = 'https://www.catalog.update.microsoft.com/api/v2/contents/search'
-        $body = @{ q = $Query } | ConvertTo-Json -Compress
-        $resp = Invoke-WebRequest -Uri $apiUrl -Method Post -Body $body `
-                                  -ContentType 'application/json' `
-                                  -UseBasicParsing -TimeoutSec 30
-        $items = ($resp.Content | ConvertFrom-Json).results
-        $update = $items | Where-Object { $_.Type -eq 'update' } |
-                  Where-Object { $_.Filename -match 'windows6\.1-.*x64.*\.msu$' } |
-                  Select-Object -First 1
-        if ($update -and $update.Download) {
-            return @{ Filename = $update.Filename; Url = $update.Download }
-        }
-    } catch {
-        Write-Warning "    v2 API 失败 ($Query): $_"
+$files = @(
+    @{
+        Url  = 'https://aka.ms/vs/17/release/vc_redist.x64.exe'
+        File = 'vc_redist.x64.exe'
+        Desc = 'VC++ 2015-2022 x64'
+    },
+    @{
+        Url  = 'https://catalog.s.download.windowsupdate.com/c/msdownload/update/software/secu/2019/03/windows6.1-kb4490628-x64_d3de52d6987f7c8bdc2c015dca69eac96047c76e.msu'
+        File = 'windows6.1-kb4490628-x64.msu'
+        Desc = 'KB4490628 (Servicing Stack Update)'
+    },
+    @{
+        Url  = 'https://catalog.s.download.windowsupdate.com/c/msdownload/update/software/secu/2019/09/windows6.1-kb4474419-v3-x64_b5614c6cea5cb4e198717789633dca16308ef79c.msu'
+        File = 'windows6.1-kb4474419-v3-x64.msu'
+        Desc = 'KB4474419 v3 (SHA-2 code signing)'
+    },
+    @{
+        Url  = 'https://catalog.s.download.windowsupdate.com/c/msdownload/update/software/updt/2016/04/windows6.1-kb3140245-x64_5b067ffb69a94a6e5f9da89ce88c658e52a0dec0.msu'
+        File = 'windows6.1-kb3140245-x64.msu'
+        Desc = 'KB3140245 (SHA-2 update)'
     }
-
-    # 兜底: catalog 页面解析 (正则抓 .msu 直链)
-    try {
-        $searchUrl = "https://www.catalog.update.microsoft.com/Search.aspx?q=$Query"
-        $page = Invoke-WebRequest -Uri $searchUrl -UseBasicParsing -TimeoutSec 30
-        $pattern = 'https://catalog\.s\.download\.windowsupdate\.com/[^"<>]+\.msu'
-        $matches = [regex]::Matches($page.Content, $pattern)
-        foreach ($m in $matches) {
-            $u = $m.Value
-            if ($u -match 'windows6\.1-.*x64.*\.msu$') {
-                $fn = [System.IO.Path]::GetFileName($u)
-                return @{ Filename = $fn; Url = $u }
-            }
-        }
-    } catch {
-        Write-Warning "    页面解析失败 ($Query): $_"
-    }
-
-    throw "无法解析 $Query 的 MSU 直链"
-}
-
-$kbs = @(
-    @{ Query = 'KB4490628'; File = 'windows6.1-kb4490628-x64.msu' },
-    @{ Query = 'KB4474419'; File = 'windows6.1-kb4474419-v2-x64.msu' },
-    @{ Query = 'KB3140245'; File = 'windows6.1-kb3140245-x64.msu' }
 )
 
-$stepIdx = 2
-foreach ($kb in $kbs) {
-    Write-Host "== [$stepIdx/4] $($kb.Query) =="
-    $info = Get-MsuInfo -Query $kb.Query
-    $target = Join-Path $outDir $kb.File
-    Invoke-WebRequest -Uri $info.Url -OutFile $target -UseBasicParsing -TimeoutSec 120
-    Write-Host ("    -> {0} ({1:N0} bytes)" -f $target, (Get-Item $target).Length)
-    $stepIdx++
+# ------------------------------------------------------------------
+# 下载全部 4 个文件
+# ------------------------------------------------------------------
+$idx = 1
+foreach ($f in $files) {
+    Write-Host "== [$idx/4] $($f.Desc) =="
+    $target = Join-Path $outDir $f.File
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    Invoke-WebRequest -Uri $f.Url -OutFile $target -UseBasicParsing -TimeoutSec 300
+    $size = (Get-Item $target).Length
+    Write-Host ("    -> {0} ({1:N0} bytes)" -f $f.File, $size)
+    if ($size -lt 100KB) { throw "下载异常: $($f.File) 只有 $size bytes" }
+    $idx++
 }
 
 # ------------------------------------------------------------------
-# install.bat - 用户双击就能装好所有依赖并重启
+# install.bat - 用户右键"以管理员身份运行"即可
 # ------------------------------------------------------------------
 $installBat = @'
 @echo off
-setlocal EnableDelayedExpansion
 chcp 65001 > nul
-title Win7 Dependency Installer - 班级喊话演示屏
+title Win7 Dependency Installer
 
 echo ============================================================
 echo    Win7 离线依赖安装 - 班级喊话演示屏
@@ -99,19 +69,19 @@ echo    请右键本文件, 以管理员身份运行
 echo ============================================================
 echo.
 
-echo [1/4] 正在安装 VC++ 2015-2022 x64 (约 1 分钟)...
+echo [1/4] VC++ 2015-2022 x64 (约 1 分钟)...
 vc_redist.x64.exe /quiet /norestart
 echo    done
 
-echo [2/4] 正在安装 KB4490628 (Servicing Stack Update, 约 30 秒)...
+echo [2/4] KB4490628 Servicing Stack Update (约 30 秒)...
 wusa.exe windows6.1-kb4490628-x64.msu /quiet /norestart
 echo    done
 
-echo [3/4] 正在安装 KB4474419 (SHA-2 code signing, 约 1 分钟)...
-wusa.exe windows6.1-kb4474419-v2-x64.msu /quiet /norestart
+echo [3/4] KB4474419 SHA-2 code signing (约 1 分钟)...
+wusa.exe windows6.1-kb4474419-v3-x64.msu /quiet /norestart
 echo    done
 
-echo [4/4] 正在安装 KB3140245 (SHA-2 update, 约 20 秒)...
+echo [4/4] KB3140245 SHA-2 update (约 20 秒)...
 wusa.exe windows6.1-kb3140245-x64.msu /quiet /norestart
 echo    done
 
@@ -123,14 +93,15 @@ echo ============================================================
 shutdown /r /t 10
 pause
 '@
-$installBat | Out-File -FilePath (Join-Path $outDir 'install.bat') -Encoding ASCII -NoNewline
+$installBat | Out-File -FilePath (Join-Path $outDir 'install.bat') -Encoding ASCII
 
 # ------------------------------------------------------------------
 # README.txt
 # ------------------------------------------------------------------
+$buildTime = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
 $readme = @"
 Win7 离线依赖安装包 - 班级喊话演示屏
-构建时间: $((Get-Date).ToString('yyyy-MM-dd HH:mm:ss')) UTC
+构建时间: $buildTime UTC
 commit:   $env:GITHUB_SHA
 
 本包包含 Windows 7 SP1 (x64) / Server 2008 R2 上运行
@@ -138,9 +109,9 @@ commit:   $env:GITHUB_SHA
 
 文件清单
 ========
-  vc_redist.x64.exe                (约 30 MB, VC++ 2015-2022 x64 运行库)
+  vc_redist.x64.exe                (约 25 MB, VC++ 2015-2022 x64 运行库)
   windows6.1-kb4490628-x64.msu     (约 10 MB, Servicing Stack Update)
-  windows6.1-kb4474419-v2-x64.msu  (约 50 MB, SHA-2 代码签名支持)
+  windows6.1-kb4474419-v3-x64.msu  (约 50 MB, SHA-2 代码签名支持)
   windows6.1-kb3140245-x64.msu     (约  1 MB, SHA-2 update)
   install.bat                      (一键安装脚本, 含自动重启)
   README.txt                       (本说明)
@@ -173,7 +144,7 @@ commit:   $env:GITHUB_SHA
   控制面板 -> 程序 -> 已安装更新, 卸载对应 KB 即可。
   VC++ 运行库走 控制面板 -> 程序 卸载 "Microsoft Visual C++ 2015-2022 Redistributable (x64)"。
 "@
-$readme | Out-File -FilePath (Join-Path $outDir 'README.txt') -Encoding UTF8 -NoNewline
+$readme | Out-File -FilePath (Join-Path $outDir 'README.txt') -Encoding UTF8
 
 # ------------------------------------------------------------------
 # 打 zip
