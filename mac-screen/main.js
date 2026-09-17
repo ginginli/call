@@ -4,7 +4,7 @@
  *  - 服务地址优先级: 命令行 --server <url> / 环境变量 CALL_SERVER > 已保存配置 > 内置云端地址 https://callclass.site
  *  - 开发模式指向本机服务时, 若服务未启动会自动用 node 拉起 server/index.js
  */
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, powerSaveBlocker } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
@@ -12,6 +12,8 @@ const https = require('https');
 const { spawn } = require('child_process');
 
 app.disableHardwareAcceleration(); // 演示屏稳定性优先, 避免部分显卡花屏
+// 阻止 OS 进入 Modern Standby / 挂起, 保持 socket 长连接不被打断(配合后端 standbyClasses)
+try { powerSaveBlocker.start('prevent-app-suspension'); } catch (e) { /* 旧版本 Electron 无此 API, 忽略 */ }
 
 const DEFAULT_SERVER = 'http://callclass.site'; // 内置云端默认服务地址: 教室端启动即直连云端, 无需再手动设置
 const SERVER_PORT = 3000;
@@ -21,6 +23,8 @@ const SERVER_CWD = path.join(__dirname, '..');
 const MAX_WAIT_SERVER = 15000;
 
 let win = null;
+let tray = null;
+let isQuitting = false;
 let startingServer = false;
 let serverUrl = DEFAULT_SERVER;
 
@@ -159,28 +163,73 @@ function createWindow() {
     console.log('[boot] render-gone:', det && det.reason);
   });
   boot();
+  // 关闭按钮 = 收到任务栏(托盘常驻), 真正退出走托盘菜单的"退出"
+  win.on('close', (e) => {
+    if (!isQuitting) {
+      e.preventDefault();
+      win.hide();
+    }
+  });
   win.on('closed', () => { win = null; });
+  createTray();
+}
+
+/* ---------------- 系统托盘 ---------------- */
+/* 演示屏藏到任务栏后, 用户能从托盘恢复窗口; 托盘菜单提供"显示/退出"两个入口 */
+function createTray() {
+  if (tray) return;
+  try {
+    // 优先用打包资源的 tray 图标; 找不到就用空图(避免 macOS 报错)
+    const iconPath = path.join(__dirname, '..', 'mac-screen', 'build', 'tray.png');
+    let img = fs.existsSync(iconPath) ? nativeImage.createFromPath(iconPath) : nativeImage.createEmpty();
+    if (img.isEmpty()) {
+      // 退化: 用窗口图标
+      try { img = win ? win.getIcon() : nativeImage.createEmpty(); } catch (e) {}
+    }
+    tray = new Tray(img);
+    tray.setToolTip('班级喊话 · 教室演示屏');
+    const menu = Menu.buildFromTemplate([
+      { label: '📢 显示演示屏', click: () => showFromTray() },
+      { label: '⏻ 退出', click: () => { isQuitting = true; app.quit(); } },
+    ]);
+    tray.setContextMenu(menu);
+    // 单击托盘图标 = 切回窗口
+    tray.on('click', () => {
+      if (!win || win.isDestroyed()) return;
+      win.isVisible() ? win.hide() : showFromTray();
+    });
+  } catch (e) {
+    console.log('[tray] init failed:', e && e.message);
+  }
+}
+function showFromTray() {
+  if (!win || win.isDestroyed()) return;
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.setFullScreen(true);
+  win.focus();
 }
 
 /* ---------------- IPC ---------------- */
 ipcMain.on('quit', () => app.quit());
 ipcMain.on('window-minimize', () => {
   if (!win || win.isDestroyed()) return;
-  const doMin = () => { if (win && !win.isDestroyed()) win.minimize(); };
-  // macOS: 全屏状态直接 minimize 不生效, 先退出全屏, 等动画完成再收起
+  // 改用 hide() 替代 minimize(): 渲染进程不会被 Windows 节流/挂起, socket 长连接保持
+  // (配合 server 的 standbyClasses, 即使 socket 后续断开, 教室端仍判在线)
+  const doHide = () => { if (win && !win.isDestroyed()) win.hide(); };
   if (win.isFullScreen()) {
     let fired = false;
     const handler = () => {
       if (fired) return;
       fired = true;
       win.removeListener('leave-full-screen', handler);
-      setTimeout(doMin, 120); // 等退出全屏动画结束
+      setTimeout(doHide, 120);
     };
     win.once('leave-full-screen', handler);
     win.setFullScreen(false);
-    setTimeout(handler, 900); // 兜底: 极端情况下事件不触发
+    setTimeout(handler, 900);
   } else {
-    doMin();
+    doHide();
   }
 });
 ipcMain.on('window-pulse', () => {
@@ -234,4 +283,6 @@ if (!app.requestSingleInstanceLock()) {
     app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
   });
   app.on('window-all-closed', () => app.quit());
+// 用户从托盘"退出"或 Cmd+Q 时, 允许真正退出进程
+app.on('before-quit', () => { isQuitting = true; });
 }

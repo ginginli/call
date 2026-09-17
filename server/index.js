@@ -135,7 +135,10 @@ if (db.cards.length === 0 && SHOW_DEMO) seedCards();
 if (db.users.length === 0 && SHOW_DEMO) seedDemo();
 
 /* ---------------- 教室端在线状态 ---------------- */
-const classSockets = new Map(); // classId -> Set<socketId>
+const classSockets = new Map();      // classId -> Set<socketId> (实际 socket 连接)
+const standbyClasses = new Map();   // classId -> expiresAt(ms), 最小化待命中(防止 OS 挂起后被判离线)
+const STANDBY_TTL = 30 * 60 * 1000; // 30 分钟无 heartbeat 则清标记
+
 function onlineCount(cid) { return (classSockets.get(cid) || new Set()).size; }
 function addPresence(cid, sid) {
   if (!classSockets.has(cid)) classSockets.set(cid, new Set());
@@ -147,6 +150,22 @@ function dropPresence(cid, sid) {
   set.delete(sid);
   if (set.size === 0) classSockets.delete(cid);
 }
+/* 综合判定: 有 socket 连着 或 在 standby 有效期内 = 都算"在线" */
+function isClassOnline(cid) {
+  if (onlineCount(cid) > 0) return true;
+  const exp = standbyClasses.get(cid);
+  if (!exp) return false;
+  if (exp > Date.now()) return true;
+  standbyClasses.delete(cid); // 过期顺手清
+  return false;
+}
+/* 每分钟扫一遍清过期 standby, 避免内存泄漏 */
+setInterval(() => {
+  const now = Date.now();
+  for (const [cid, exp] of standbyClasses) {
+    if (exp <= now) standbyClasses.delete(cid);
+  }
+}, 60 * 1000).unref();
 
 /* ---------------- 班级序列化 ---------------- */
 function membersOf(c) {
@@ -159,7 +178,7 @@ function visibleClasses(uid) {
 function classJSON(c, uid) {
   return {
     id: c.id, name: c.name, color: c.color, isOwner: c.ownerId === uid,
-    online: onlineCount(c.id) > 0,
+    online: isClassOnline(c.id),
     bindCode: c.ownerId === uid ? c.bindCode : undefined,
     pendingInvites: c.ownerId === uid
       ? db.invites.filter((i) => i.classId === c.id && i.status === 'pending').length : 0,
@@ -699,13 +718,40 @@ app.post('/api/classes/:id/code', auth, (req, res) => {
 app.get('/api/classes/:id/status', auth, (req, res) => {
   const c = db.classes.find((x) => x.id === req.params.id);
   if (!c) return res.status(404).json({ error: '班级不存在' });
-  res.json({ online: onlineCount(c.id) > 0 });
+  res.json({ online: isClassOnline(c.id) });
 });
 
 app.post('/api/classes/:id/minimize', auth, (req, res) => {
   const c = classForReq(req, res, req.params.id);
   if (!c) return;
   io.to('class:' + c.id).emit('minimize', { reason: '老师远程最小化通知屏' });
+  res.json({ ok: true });
+});
+
+/* 教室端自身上报"进入/退出待命", 用 bindCode 自鉴权(无需 uid)
+ * 注: 老师从后台远程最小化继续走上面的 /api/classes/:id/minimize(那边直推 socket 'minimize' 事件)
+ */
+app.post('/api/room/:code/standby', (req, res) => {
+  const code = String(req.params.code || '').trim().toUpperCase();
+  const cls = db.classes.find((c) => c.bindCode.toUpperCase() === code);
+  if (!cls) return res.status(404).json({ error: '绑定码无效' });
+  standbyClasses.set(cls.id, Date.now() + STANDBY_TTL);
+  res.json({ ok: true, ttl: STANDBY_TTL });
+});
+app.post('/api/room/:code/restore', (req, res) => {
+  const code = String(req.params.code || '').trim().toUpperCase();
+  const cls = db.classes.find((c) => c.bindCode.toUpperCase() === code);
+  if (!cls) return res.status(404).json({ error: '绑定码无效' });
+  standbyClasses.delete(cls.id);
+  res.json({ ok: true });
+});
+app.post('/api/room/:code/heartbeat', (req, res) => {
+  const code = String(req.params.code || '').trim().toUpperCase();
+  const cls = db.classes.find((c) => c.bindCode.toUpperCase() === code);
+  if (!cls) return res.status(404).json({ error: '绑定码无效' });
+  if (standbyClasses.has(cls.id)) {
+    standbyClasses.set(cls.id, Date.now() + STANDBY_TTL);
+  }
   res.json({ ok: true });
 });
 
@@ -740,7 +786,7 @@ app.get('/api/classes/:id/notifications', auth, (req, res) => {
   const list = db.notifications
     .filter((n) => n.classId === c.id)
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
-    .map((n) => ({ ...n, onlineNow: onlineCount(c.id) > 0 }));
+    .map((n) => ({ ...n, onlineNow: isClassOnline(c.id) }));
   res.json({ notifications: list });
 });
 
@@ -760,7 +806,7 @@ app.post('/api/classes/:id/notify', auth, (req, res) => {
     id: nextId('nt'), classId: c.id, className: c.name,
     content, voice, color,
     fromId: u.id, fromName: u.username,
-    delivered: onlineCount(c.id) > 0,
+    delivered: isClassOnline(c.id),
     duration, createdAt: nowISO(),
   };
   addNotifRecord(record);
@@ -1008,7 +1054,7 @@ function executeJob(job) {
     id: nextId('nt'), classId: cls.id, className: cls.name,
     content: job.content, voice: job.voice !== false, color: job.color || cls.color,
     fromId: job.fromId, fromName: job.fromName,
-    delivered: onlineCount(cls.id) > 0, duration: job.duration || 0,
+    delivered: isClassOnline(cls.id), duration: job.duration || 0,
     schedule: job.type, createdAt: nowISO(),
   };
   addNotifRecord(record);

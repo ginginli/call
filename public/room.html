@@ -201,8 +201,12 @@ socket.on('bound', (r) => {
     if (!audioUnlocked) document.getElementById('unlockPill').classList.remove('hide');
     toast('绑定成功：' + className, 'ok');
     tickClock(); setInterval(tickClock, 1000);
-    // 待命模式(开机自启恢复时):绑定确认后自动收起到任务栏待命
-    if (waitMode && window.desktopApp && !manualBind) setTimeout(() => { try { window.desktopApp.minimize(); } catch (e) {} }, 900);
+    startHeartbeat();
+    // 待命模式(开机自启恢复时):绑定确认后自动收起到任务栏待命, 并通知后端进入待命
+    if (waitMode && !manualBind) {
+      fetch('/api/room/' + encodeURIComponent(code) + '/standby', { method: 'POST' }).catch(() => {});
+      if (window.desktopApp) setTimeout(() => { try { window.desktopApp.minimize(); } catch (e) {} }, 900);
+    }
   } else {
     code = ''; localStorage.removeItem('room_code');
     showSetup();
@@ -220,6 +224,8 @@ socket.on('notify', (m) => {
 });
 
 socket.on('rebind', (m) => {
+  // 清代码前先通知后端退出待命(此时 code 还有效)
+  if (code) fetch('/api/room/' + encodeURIComponent(code) + '/restore', { method: 'POST' }).catch(() => {});
   code = ''; localStorage.removeItem('room_code');
   openedByNotify = false;
   if (waitMode) setWaitMode(false);
@@ -340,11 +346,27 @@ function setWaitMode(v) {
   waitMode = !!v;
   localStorage.setItem('room_waitmode', waitMode ? '1' : '0');
   renderWaitBtn();
-  if (waitMode && window.desktopApp) { try { window.desktopApp.minimize(); } catch (e) {} }
+  if (!code) return;
+  if (waitMode) {
+    // 通知后端"我进入待命", 30 分钟内都算在线, 即使 OS 挂起 socket 也不会被误判离线
+    fetch('/api/room/' + encodeURIComponent(code) + '/standby', { method: 'POST' }).catch(() => {});
+    if (window.desktopApp) { try { window.desktopApp.minimize(); } catch (e) {} }
+  } else {
+    fetch('/api/room/' + encodeURIComponent(code) + '/restore', { method: 'POST' }).catch(() => {});
+  }
 }
 function toggleWaitMode() {
   setWaitMode(!waitMode);
   toast(waitMode ? '待命模式已开启：平时收在任务栏，收到老师通知会自动弹出并播报，播完自动收回' : '已切回常显模式：屏幕保持显示待机画面', 'ok');
+}
+/* 5 分钟一次心跳, 防止"待命"标记过期被后端清掉 */
+let heartbeatTimer = null;
+function startHeartbeat() {
+  if (heartbeatTimer) return;
+  heartbeatTimer = setInterval(() => {
+    if (!code || !waitMode) return;
+    fetch('/api/room/' + encodeURIComponent(code) + '/heartbeat', { method: 'POST' }).catch(() => {});
+  }, 5 * 60 * 1000);
 }
 if (window.desktopApp) {
   const b = document.getElementById('btnDesktopExit');
