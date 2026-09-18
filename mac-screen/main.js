@@ -200,7 +200,12 @@ function createWindow() {
     if (!isQuitting) {
       e.preventDefault();
       win.hide();
+      notifyHidden();
     }
+  });
+  // 从任务栏点回来(或任何方式 restore)后自动回到全屏, 保持教室屏形态
+  win.on('restore', () => {
+    if (win && !win.isDestroyed()) { try { win.setFullScreen(true); } catch (e) { /* 忽略 */ } }
   });
   win.on('closed', () => { win = null; });
   createTray();
@@ -262,10 +267,11 @@ function createTray() {
       { label: '⏻ 退出', click: () => { isQuitting = true; app.quit(); } },
     ]);
     tray.setContextMenu(menu);
-    // 单击托盘图标 = 切回窗口
+    // 单击托盘图标 = 切回窗口; 最小化状态 isVisible() 仍为 true, 必须单独判断, 否则点托盘反而会藏起来
     tray.on('click', () => {
       if (!win || win.isDestroyed()) return;
-      win.isVisible() ? win.hide() : showFromTray();
+      if (win.isMinimized() || !win.isVisible()) showFromTray();
+      else win.hide();
     });
   } catch (e) {
     console.log('[tray] init failed:', e && e.message);
@@ -281,38 +287,51 @@ function showFromTray() {
 
 /* ---------------- IPC ---------------- */
 ipcMain.on('quit', () => app.quit());
-/* 收起到托盘后给出明确提示: 托盘图标小且可能被折叠进 ^ , 用户常因此"找不到大屏" */
+/* 点"关闭"藏进托盘后给出提示: 托盘图标小且可能被折叠进 ^ , 用户常因此"找不到大屏" */
 function notifyHidden() {
   if (process.platform !== 'win32' || !tray) return;
   try {
     tray.displayBalloon({
-      title: '已收起, 仍在后台接收通知',
+      title: '已收起到托盘, 仍在后台接收通知',
       content: '双击桌面「班级喊话演示屏」图标, 或点击右下角托盘图标, 即可重新打开大屏。',
+    });
+  } catch (e) { /* 部分系统不支持气泡通知, 忽略 */ }
+}
+/* 最小化到任务栏后的提示: 明确告诉老师去哪找 —— 任务栏, 不是托盘 */
+function notifyMinimized() {
+  if (process.platform !== 'win32' || !tray) return;
+  try {
+    tray.displayBalloon({
+      title: '已最小化到任务栏, 仍在后台接收通知',
+      content: '点击任务栏上的「班级喊话演示屏」即可恢复大屏 (Ctrl+Shift+9 也可以)。',
     });
   } catch (e) { /* 部分系统不支持气泡通知, 忽略 */ }
 }
 ipcMain.on('window-minimize', () => {
   if (!win || win.isDestroyed()) return;
-  // 改用 hide() 替代 minimize(): 渲染进程不会被 Windows 节流/挂起, socket 长连接保持
-  // (配合 server 的 standbyClasses, 即使 socket 后续断开, 教室端仍判在线)
-  const doHide = () => {
+  // 真·最小化到任务栏: 老师/网管能直接从任务栏点回来.
+  // (旧实现用 hide() 完全隐藏 → 任务栏和 Alt+Tab 里都没有 → 界面写着"最小化到任务栏"却找不到窗口)
+  // 保活由两件事兜底: ① 已关闭 Chromium 后台节流(setBackgroundThrottling(false));
+  //                  ② 后端 standbyClasses 30 分钟 TTL + 前端心跳(2 分钟).
+  const doMin = () => {
     if (!win || win.isDestroyed()) return;
-    win.hide();
-    notifyHidden();
+    try { win.minimize(); } catch (e) { win.hide(); } // 极端情况退化回隐藏, 至少不崩
+    notifyMinimized();
   };
+  // 全屏窗口先退全屏再最小化, 避免部分 Windows 驱动下任务栏不出现按钮; restore 时会自动回到全屏
   if (win.isFullScreen()) {
     let fired = false;
     const handler = () => {
       if (fired) return;
       fired = true;
       win.removeListener('leave-full-screen', handler);
-      setTimeout(doHide, 120);
+      setTimeout(doMin, 120);
     };
     win.once('leave-full-screen', handler);
     win.setFullScreen(false);
     setTimeout(handler, 900);
   } else {
-    doHide();
+    doMin();
   }
 });
 ipcMain.on('window-pulse', () => {
