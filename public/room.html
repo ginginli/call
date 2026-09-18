@@ -92,7 +92,7 @@ let className = '';
 let classColor = '#4f46e5';
 let overlayTimer = null;
 let lastRead = '';
-let waitMode = localStorage.getItem('room_waitmode') === '1'; // 桌面端待命模式:平时最小化,通知自动弹出
+let waitMode = localStorage.getItem('room_waitmode') !== '0'; // 桌面端默认进入待命:平时最小化到任务栏,收到通知才弹出;老用户保留其选择
 let openedByNotify = false; // 本次是否由通知弹出(弹完自动收回)
 let manualBind = false; // 是否是老师手动重新绑定(手动绑定时不自动收走窗口)
 
@@ -202,9 +202,10 @@ socket.on('bound', (r) => {
     toast('绑定成功：' + className, 'ok');
     tickClock(); setInterval(tickClock, 1000);
     startHeartbeat();
+    bindVisibilityWatch();
     // 待命模式(开机自启恢复时):绑定确认后自动收起到任务栏待命, 并通知后端进入待命
     if (waitMode && !manualBind) {
-      fetch('/api/room/' + encodeURIComponent(code) + '/standby', { method: 'POST' }).catch(() => {});
+      postRoom('/standby');
       if (window.desktopApp) setTimeout(() => { try { window.desktopApp.minimize(); } catch (e) {} }, 900);
     }
   } else {
@@ -225,7 +226,7 @@ socket.on('notify', (m) => {
 
 socket.on('rebind', (m) => {
   // 清代码前先通知后端退出待命(此时 code 还有效)
-  if (code) fetch('/api/room/' + encodeURIComponent(code) + '/restore', { method: 'POST' }).catch(() => {});
+  if (code) postRoom('/restore');
   code = ''; localStorage.removeItem('room_code');
   openedByNotify = false;
   if (waitMode) setWaitMode(false);
@@ -349,24 +350,49 @@ function setWaitMode(v) {
   if (!code) return;
   if (waitMode) {
     // 通知后端"我进入待命", 30 分钟内都算在线, 即使 OS 挂起 socket 也不会被误判离线
-    fetch('/api/room/' + encodeURIComponent(code) + '/standby', { method: 'POST' }).catch(() => {});
+    postRoom('/standby');
     if (window.desktopApp) { try { window.desktopApp.minimize(); } catch (e) {} }
   } else {
-    fetch('/api/room/' + encodeURIComponent(code) + '/restore', { method: 'POST' }).catch(() => {});
+    postRoom('/restore');
   }
 }
 function toggleWaitMode() {
   setWaitMode(!waitMode);
   toast(waitMode ? '待命模式已开启：平时收在任务栏，收到老师通知会自动弹出并播报，播完自动收回' : '已切回常显模式：屏幕保持显示待机画面', 'ok');
 }
-/* 5 分钟一次心跳, 防止"待命"标记过期被后端清掉 */
+/* 心跳: sendBeacon 优先(页面隐藏/被节流时仍能送达), 失败回退 fetch. 2 分钟一次足够覆盖 30 分钟 standby TTL */
 let heartbeatTimer = null;
+function postRoom(path) {
+  if (!code) return;
+  const url = '/api/room/' + encodeURIComponent(code) + path;
+  try {
+    if (navigator.sendBeacon && navigator.sendBeacon(url, '')) return;
+  } catch (e) {}
+  fetch(url, { method: 'POST', keepalive: true }).catch(() => {});
+}
 function startHeartbeat() {
   if (heartbeatTimer) return;
   heartbeatTimer = setInterval(() => {
-    if (!code || !waitMode) return;
-    fetch('/api/room/' + encodeURIComponent(code) + '/heartbeat', { method: 'POST' }).catch(() => {});
-  }, 5 * 60 * 1000);
+    if (!code) return;
+    // 只要绑定了, 就一直续期(不管 waitMode). 后端 standby TTL 30 分钟, 2 分钟一次足够.
+    postRoom('/heartbeat');
+  }, 2 * 60 * 1000);
+}
+/* 页面隐藏/最小化时主动通知后端"我进待命", 后端 30 分钟内都会算在线;
+   恢复可见时退出待命. 不依赖 waitMode, 任何最小化行为都会兜底. */
+function bindVisibilityWatch() {
+  if (bindVisibilityWatch._done) return;
+  bindVisibilityWatch._done = true;
+  const go = () => {
+    if (!code) return;
+    if (document.hidden) postRoom('/standby');
+    else postRoom('/restore');
+  };
+  document.addEventListener('visibilitychange', go);
+  // 关页面/切后台时浏览器仍会尝试送达 sendBeacon, 是最稳的兜底
+  window.addEventListener('pagehide', () => { if (code) postRoom('/standby'); });
+  // 页面已隐藏(如刚启动就最小化)时, 下一帧立刻补一次
+  if (document.hidden) setTimeout(go, 0);
 }
 if (window.desktopApp) {
   const b = document.getElementById('btnDesktopExit');

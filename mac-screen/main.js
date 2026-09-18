@@ -36,6 +36,17 @@ function normalizeServer(raw) {
   return s;
 }
 
+// 是否允许保留的服务地址(默认站点/内网): 其余一律重置成默认, 老师无需手动删 settings.json
+function isLocalishServer(u) {
+  if (!u) return false;
+  const s = u.toLowerCase();
+  if (s === 'https://callclass.site') return true;       // 默认站点: 永远保留
+  if (/\.local(\/|:|$)/.test(s) || /\.lan(\/|:|$)/.test(s)) return true; // 内网域名
+  if (/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$)/.test(s)) return true; // 本机
+  if (/^https?:\/\/(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})(:\d+)?(\/|$)/.test(s)) return true; // 内网 IP
+  return false;
+}
+
 function configPath() {
   return path.join(app.getPath('userData'), 'settings.json');
 }
@@ -66,13 +77,19 @@ function initialServerUrl() {
   if (fromEnv) return fromEnv;
   const saved = normalizeServer(loadConfig().server);
   if (saved) {
+    // 默认站点 / 局域网地址: 保留, 不动
+    if (isLocalishServer(saved)) return saved;
     // 迁移: 老版本存的是 http://callclass.site, 校园网封 80 会连不上, 自动升级为 https
     if (saved.toLowerCase() === 'http://callclass.site') {
       serverUrl = 'https://callclass.site';
       saveConfig({ server: serverUrl });
       return serverUrl;
     }
-    return saved;
+    // 其他(外网/杂乱/测试地址): 一律重置成默认, 老师无需手动删 settings.json
+    console.warn('[config] 忽略非允许地址:', saved, '→ 重置为', DEFAULT_SERVER);
+    saveConfig({ server: DEFAULT_SERVER });
+    serverUrl = DEFAULT_SERVER;
+    return serverUrl;
   }
   return DEFAULT_SERVER;
 }
@@ -165,6 +182,9 @@ function createWindow() {
     },
   });
   win.loadFile(path.join(__dirname, 'error.html')); // 先占位, boot 成功后跳教室端
+  // 关闭 Chromium 后台节流: 教室端窗口最小化时, 渲染进程仍按正常速率运行
+  // (setInterval/visibilitychange/fetch 都不被压到 1 分钟/次). 否则教室端最小化后会被服务端误判离线.
+  win.webContents.setBackgroundThrottling(false);
   win.webContents.on('did-finish-load', () => {
     console.log('[boot] loaded:', win.webContents.getURL());
   });
@@ -273,13 +293,6 @@ ipcMain.handle('set-auto-launch', (e, enable) => {
 ipcMain.on('retry', () => { if (win) boot(); });
 ipcMain.on('reload', () => { if (win) win.reload(); });
 ipcMain.handle('get-server', () => serverUrl);
-ipcMain.handle('save-server', (e, raw) => {
-  const s = normalizeServer(raw);
-  if (!s) return { ok: false, error: '地址需以 http:// 或 https:// 开头, 例如 http://192.168.1.5:3000' };
-  serverUrl = s;
-  saveConfig({ server: s });
-  return { ok: true, server: s };
-});
 
 /* ---------------- 生命周期 ---------------- */
 serverUrl = initialServerUrl();
