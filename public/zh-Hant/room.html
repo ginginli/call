@@ -25,7 +25,7 @@
       <button class="btn btn-sm" onclick="toggleFull()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⛶ 全螢幕</button>
       <button class="btn btn-sm" onclick="doTest()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">測試播報</button>
       <button class="btn btn-sm btn-danger" onclick="doUnbind()">解除綁定</button>
-      <button class="btn btn-sm" id="btnMinWait" onclick="toggleWaitMode()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">📥 最小化待命</button>
+      <button class="btn btn-sm" id="btnMinWait" onclick="toggleWaitMode()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">📥 縮成小窗待命</button>
       <button class="btn btn-sm" id="btnAuto" onclick="toggleAutoLaunch()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⚡ 開機自動啟動:關</button>
       <button class="btn btn-sm" id="btnDesktopExit" onclick="desktopQuit()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⏻ 結束教室端</button>
     </div>
@@ -338,7 +338,7 @@ async function toggleAutoLaunch() {
 function renderWaitBtn() {
   const el = document.getElementById('btnMinWait');
   if (!el) return;
-  el.textContent = waitMode ? '📌 固定在螢幕上顯示' : '📥 最小化待命';
+  el.textContent = waitMode ? '📌 固定在螢幕上顯示' : '📥 縮成小窗待命';
 }
 function setWaitMode(v) {
   waitMode = !!v;
@@ -348,7 +348,7 @@ function setWaitMode(v) {
 }
 function toggleWaitMode() {
   setWaitMode(!waitMode);
-  toast(waitMode ? '待命模式已開啟：平時收在工作列，收到老師通知會自動彈出並播報，播完自動收回' : '已切回常顯模式：螢幕保持顯示待機畫面', 'ok');
+  toast(waitMode ? '待命模式已開啟：平時收成右下角小視窗，收到老師通知會自動彈回全螢幕並播報，播完自動縮回小視窗' : '已切回常顯模式：螢幕保持顯示待機畫面', 'ok');
 }
 if (window.desktopApp) {
   const b = document.getElementById('btnDesktopExit');

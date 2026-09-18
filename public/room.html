@@ -25,7 +25,7 @@
       <button class="btn btn-sm" onclick="toggleFull()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⛶ 全屏</button>
       <button class="btn btn-sm" onclick="doTest()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">测试播报</button>
       <button class="btn btn-sm btn-danger" onclick="doUnbind()">解绑</button>
-      <button class="btn btn-sm" id="btnMinWait" onclick="toggleWaitMode()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">📥 最小化待命</button>
+      <button class="btn btn-sm" id="btnMinWait" onclick="toggleWaitMode()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">📥 缩成小窗待命</button>
       <button class="btn btn-sm" id="btnAuto" onclick="toggleAutoLaunch()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⚡ 开机自启:关</button>
       <button class="btn btn-sm" id="btnDesktopExit" onclick="desktopQuit()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⏻ 退出教室端</button>
     </div>
@@ -341,7 +341,7 @@ async function toggleAutoLaunch() {
 function renderWaitBtn() {
   const el = document.getElementById('btnMinWait');
   if (!el) return;
-  el.textContent = waitMode ? '📌 固定在屏幕上显示' : '📥 最小化待命';
+  el.textContent = waitMode ? '📌 固定在屏幕上显示' : '📥 缩成小窗待命';
 }
 function setWaitMode(v) {
   waitMode = !!v;
@@ -358,7 +358,7 @@ function setWaitMode(v) {
 }
 function toggleWaitMode() {
   setWaitMode(!waitMode);
-  toast(waitMode ? '待命模式已开启：平时收在任务栏，收到老师通知会自动弹出并播报，播完自动收回' : '已切回常显模式：屏幕保持显示待机画面', 'ok');
+  toast(waitMode ? '待命模式已开启：平时收成右下角小窗，收到老师通知会自动弹回全屏并播报，播完自动缩回小窗' : '已切回常显模式：屏幕保持显示待机画面', 'ok');
 }
 /* 心跳: sendBeacon 优先(页面隐藏/被节流时仍能送达), 失败回退 fetch. 2 分钟一次足够覆盖 30 分钟 standby TTL */
 let heartbeatTimer = null;

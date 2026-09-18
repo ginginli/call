@@ -4,7 +4,7 @@
  *  - 服务地址优先级: 命令行 --server <url> / 环境变量 CALL_SERVER > 已保存配置 > 内置云端地址 https://callclass.site
  *  - 开发模式指向本机服务时, 若服务未启动会自动用 node 拉起 server/index.js
  */
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, powerSaveBlocker, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, powerSaveBlocker, globalShortcut, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
@@ -27,6 +27,9 @@ let tray = null;
 let isQuitting = false;
 let startingServer = false;
 let serverUrl = DEFAULT_SERVER;
+/* 待命形态 = 收成右下角小窗(方案B): 让出屏幕但始终可见, 不再"最小化后找不到大屏" */
+let isMini = false;
+const MINI_W = 320, MINI_H = 180, MINI_MARGIN = 16;
 
 /* ---------------- 服务地址 ---------------- */
 function normalizeServer(raw) {
@@ -207,6 +210,8 @@ function createWindow() {
   win.on('restore', () => {
     if (win && !win.isDestroyed()) { try { win.setFullScreen(true); } catch (e) { /* 忽略 */ } }
   });
+  // 任何方式回到全屏(托盘/快捷键/双击 exe)后, 退出小窗形态
+  win.on('enter-full-screen', () => { isMini = false; });
   win.on('closed', () => { win = null; });
   createTray();
 }
@@ -270,7 +275,8 @@ function createTray() {
     // 单击托盘图标 = 切回窗口; 最小化状态 isVisible() 仍为 true, 必须单独判断, 否则点托盘反而会藏起来
     tray.on('click', () => {
       if (!win || win.isDestroyed()) return;
-      if (win.isMinimized() || !win.isVisible()) showFromTray();
+      // 小窗待命 / 最小化 / 已收进托盘 → 一律恢复全屏; 已是全屏 → 收进托盘
+      if (isMini || win.isMinimized() || !win.isVisible()) showFromTray();
       else win.hide();
     });
   } catch (e) {
@@ -279,6 +285,7 @@ function createTray() {
 }
 function showFromTray() {
   if (!win || win.isDestroyed()) return;
+  isMini = false;
   if (win.isMinimized()) win.restore();
   win.show();
   win.setFullScreen(true);
@@ -297,57 +304,48 @@ function notifyHidden() {
     });
   } catch (e) { /* 部分系统不支持气泡通知, 忽略 */ }
 }
-/* 最小化到任务栏后的提示: 明确告诉老师去哪找 —— 任务栏, 不是托盘 */
-function notifyMinimized() {
-  if (process.platform !== 'win32' || !tray) return;
-  try {
-    tray.displayBalloon({
-      title: '已最小化到任务栏, 仍在后台接收通知',
-      content: '点击任务栏上的「班级喊话演示屏」即可恢复大屏 (Ctrl+Shift+9 也可以)。',
-    });
-  } catch (e) { /* 部分系统不支持气泡通知, 忽略 */ }
-}
-ipcMain.on('window-minimize', () => {
+/* 退全屏是异步的: 必须等窗口真正离开全屏后再改尺寸, 否则 setBounds 会被驱动还原 */
+function afterLeaveFullScreen(fn) {
   if (!win || win.isDestroyed()) return;
-  // 真·最小化到任务栏: 老师/网管能直接从任务栏点回来.
-  // (旧实现用 hide() 完全隐藏 → 任务栏和 Alt+Tab 里都没有 → 界面写着"最小化到任务栏"却找不到窗口)
-  // 保活由两件事兜底: ① 已关闭 Chromium 后台节流(setBackgroundThrottling(false));
-  //                  ② 后端 standbyClasses 30 分钟 TTL + 前端心跳(2 分钟).
-  const doMin = () => {
+  let done = false;
+  const run = () => { if (done) return; done = true; setTimeout(fn, 120); };
+  if (!win.isFullScreen()) { run(); return; }
+  win.once('leave-full-screen', run);
+  try { win.setFullScreen(false); } catch (e) { run(); }
+  setTimeout(run, 900); // 兜底: 个别环境不触发 leave-full-screen
+}
+/* 待命形态: 缩成右下角小窗(方案B).
+   历史教训: ① hide() → 任务栏和 Alt+Tab 都没有, 老师找不到;
+             ② win.minimize() → 全屏跑在投影屏时, 任务栏在笔记本屏幕上, 老师同样找不到.
+   小窗贴在自己那块屏的右下角, 始终可见可点, 收到通知再由 showFromTray() 弹回全屏.
+   保活: 窗口并未最小化, 页面 visibilitychange 不触发; 由前端心跳(2 分钟) + 后端 standby TTL(30 分钟) 兜底. */
+function enterMini() {
+  if (!win || win.isDestroyed()) return;
+  afterLeaveFullScreen(() => {
     if (!win || win.isDestroyed()) return;
-    try { win.minimize(); } catch (e) { win.hide(); } // 极端情况退化回隐藏, 至少不崩
-    notifyMinimized();
-  };
-  // 全屏窗口先退全屏再最小化, 避免部分 Windows 驱动下任务栏不出现按钮; restore 时会自动回到全屏
-  if (win.isFullScreen()) {
-    let fired = false;
-    const handler = () => {
-      if (fired) return;
-      fired = true;
-      win.removeListener('leave-full-screen', handler);
-      setTimeout(doMin, 120);
-    };
-    win.once('leave-full-screen', handler);
-    win.setFullScreen(false);
-    setTimeout(handler, 900);
-  } else {
-    doMin();
-  }
-});
+    try {
+      // workArea 已排除任务栏/程序坞; 多屏时跟随窗口原来所在的那块屏
+      const wa = screen.getDisplayMatching(win.getBounds()).workArea;
+      win.setBounds({
+        width: MINI_W,
+        height: MINI_H,
+        x: Math.round(wa.x + wa.width - MINI_W - MINI_MARGIN),
+        y: Math.round(wa.y + wa.height - MINI_H - MINI_MARGIN),
+      });
+    } catch (e) { /* 至少已退出全屏, 窗口仍然可见 */ }
+    try { win.show(); win.focus(); } catch (e) { /* 忽略 */ }
+    isMini = true;
+  });
+}
+ipcMain.on('window-minimize', () => enterMini());
 ipcMain.on('window-pulse', () => {
   if (!win || win.isDestroyed()) return;
-  const raise = () => {
-    if (win && !win.isDestroyed()) {
-      win.show();
-      win.setFullScreen(true);
-      win.focus();
-    }
-  };
+  // 收到通知一律弹回全屏: 小窗待命 / 最小化 / 收进托盘 都要能弹出来
   if (win.isMinimized()) {
-    win.restore();      // 先取消最小化
-    setTimeout(raise, 350); // 等窗口回到屏幕再进全屏
+    win.restore();                // 先取消最小化
+    setTimeout(showFromTray, 350); // 等窗口回到屏幕再进全屏
   } else {
-    raise();
+    showFromTray();
   }
 });
 ipcMain.handle('get-auto-launch', () => {

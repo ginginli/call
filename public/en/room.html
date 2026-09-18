@@ -25,7 +25,7 @@
       <button class="btn btn-sm" onclick="toggleFull()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⛶ Fullscreen</button>
       <button class="btn btn-sm" onclick="doTest()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">Test</button>
       <button class="btn btn-sm btn-danger" onclick="doUnbind()">Unbind</button>
-      <button class="btn btn-sm" id="btnMinWait" onclick="toggleWaitMode()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">📥 Minimize</button>
+      <button class="btn btn-sm" id="btnMinWait" onclick="toggleWaitMode()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">📥 Minimize to corner</button>
       <button class="btn btn-sm" id="btnAuto" onclick="toggleAutoLaunch()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⚡ Auto start: off</button>
       <button class="btn btn-sm" id="btnDesktopExit" onclick="desktopQuit()" style="display:none;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)">⏻ Exit</button>
     </div>
@@ -334,7 +334,7 @@ async function toggleAutoLaunch() {
 function renderWaitBtn() {
   const el = document.getElementById('btnMinWait');
   if (!el) return;
-  el.textContent = waitMode ? '📌 Keep on screen' : '📥 Minimize';
+  el.textContent = waitMode ? '📌 Keep on screen' : '📥 Minimize to corner';
 }
 function setWaitMode(v) {
   waitMode = !!v;
@@ -344,7 +344,7 @@ function setWaitMode(v) {
 }
 function toggleWaitMode() {
   setWaitMode(!waitMode);
-  toast(waitMode ? 'Standby on: it stays in the taskbar and pops up automatically for each notice, then hides again.' : 'Switched back to always-visible mode.', 'ok');
+  toast(waitMode ? 'Standby on: the screen shrinks into a small corner window and pops back to full screen for each notice, then shrinks again.' : 'Switched back to always-visible mode.', 'ok');
 }
 if (window.desktopApp) {
   const b = document.getElementById('btnDesktopExit');
