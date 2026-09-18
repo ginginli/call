@@ -301,7 +301,12 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on('second-instance', () => {
-    if (win) { if (win.isMinimized()) win.restore(); win.focus(); }
+    // 再次双击 exe 时唤起已有窗口.
+    // 关键: 用户点过"关闭/最小化"后窗口处于 hide() 状态, 此时 isMinimized() 返回 false,
+    // 旧代码只做 restore()+focus() 对隐藏窗口无效 → 用户看到"双击毫无反应", 却仍在后台收通知.
+    // 统一走 showFromTray(): 它已包含 restore + show + 全屏 + focus.
+    if (!win || win.isDestroyed()) { createWindow(); return; }
+    showFromTray();
   });
   app.whenReady().then(() => {
     createWindow();
