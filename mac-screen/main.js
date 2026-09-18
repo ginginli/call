@@ -15,7 +15,7 @@ app.disableHardwareAcceleration(); // 演示屏稳定性优先, 避免部分显�
 // 阻止 OS 进入 Modern Standby / 挂起, 保持 socket 长连接不被打断(配合后端 standbyClasses)
 try { powerSaveBlocker.start('prevent-app-suspension'); } catch (e) { /* 旧版本 Electron 无此 API, 忽略 */ }
 
-const DEFAULT_SERVER = 'http://callclass.site'; // 内置云端默认服务地址: 教室端启动即直连云端, 无需再手动设置
+const DEFAULT_SERVER = 'https://callclass.site'; // 内置云端默认服务地址: 强制 HTTPS(443), 校园网常封 HTTP 80 端口导致连不上
 const SERVER_PORT = 3000;
 // 以下仅开发模式用于"自动拉起本机服务";打包后的独立 exe/app 不包含 node, 需连接已运行的服务
 const SERVER_ENTRY = path.join(__dirname, '..', 'server', 'index.js');
@@ -65,7 +65,15 @@ function initialServerUrl() {
   const fromEnv = normalizeServer(envVal);
   if (fromEnv) return fromEnv;
   const saved = normalizeServer(loadConfig().server);
-  if (saved) return saved;
+  if (saved) {
+    // 迁移: 老版本存的是 http://callclass.site, 校园网封 80 会连不上, 自动升级为 https
+    if (saved.toLowerCase() === 'http://callclass.site') {
+      serverUrl = 'https://callclass.site';
+      saveConfig({ server: serverUrl });
+      return serverUrl;
+    }
+    return saved;
+  }
   return DEFAULT_SERVER;
 }
 
@@ -83,7 +91,8 @@ function httpGetJson(url, timeout) {
 }
 
 function isServerUp(base) {
-  return httpGetJson(base + '/api/health', 900).then((r) => r.ok);
+  // 3 秒超时: 教室机器冷启动后首次 DNS 解析/建连可能很慢, 900ms 容易误判失败
+  return httpGetJson(base + '/api/health', 3000).then((r) => r.ok);
 }
 
 function isLocalUrl(base) {
@@ -127,6 +136,9 @@ function loadErrorPage(reason) {
 }
 
 async function boot() {
+  // 先试一次, 失败再重试一次(防教室网络冷启动抖动), 两次都失败才报错
+  if (await isServerUp(serverUrl)) { loadRoom(); return; }
+  await new Promise((r) => setTimeout(r, 800));
   if (await isServerUp(serverUrl)) { loadRoom(); return; }
   const isDevLocal = !app.isPackaged && isLocalUrl(serverUrl) && fs.existsSync(SERVER_ENTRY);
   if (isDevLocal) {
@@ -134,7 +146,7 @@ async function boot() {
     if (r.ok) { loadRoom(); return; }
     loadErrorPage(r.reason || '服务不可用');
   } else {
-    loadErrorPage('无法连接服务 ' + serverUrl + '\n请确认服务已启动, 或在下方填写正确的服务地址。');
+    loadErrorPage('无法连接服务 ' + serverUrl + '\n请检查教室网络是否能上网, 或在下方填写正确的服务地址。');
   }
 }
 
