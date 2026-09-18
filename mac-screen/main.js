@@ -4,7 +4,7 @@
  *  - 服务地址优先级: 命令行 --server <url> / 环境变量 CALL_SERVER > 已保存配置 > 内置云端地址 https://callclass.site
  *  - 开发模式指向本机服务时, 若服务未启动会自动用 node 拉起 server/index.js
  */
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, powerSaveBlocker } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, powerSaveBlocker, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
@@ -208,14 +208,51 @@ function createWindow() {
 
 /* ---------------- 系统托盘 ---------------- */
 /* 演示屏藏到任务栏后, 用户能从托盘恢复窗口; 托盘菜单提供"显示/退出"两个入口 */
+/* 纯代码绘制 32x32 托盘图标(靛蓝圆底 + 广播波纹):
+   不依赖外部图片资源, 避免图标文件缺失导致托盘空白、用户找不到大屏 */
+function buildTrayIcon() {
+  try {
+    const S = 32;
+    const buf = Buffer.alloc(S * S * 4); // BGRA
+    const put = (x, y, b, g, r) => {
+      if (x < 0 || y < 0 || x >= S || y >= S) return;
+      const i = (y * S + x) * 4;
+      buf[i] = b; buf[i + 1] = g; buf[i + 2] = r; buf[i + 3] = 255;
+    };
+    const c = 15.5, R = 15;
+    for (let y = 0; y < S; y++) {
+      for (let x = 0; x < S; x++) {
+        const dx = x - c, dy = y - c;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d <= R) put(x, y, 241, 102, 99);                 // #6366F1 靛蓝圆底
+        if (d <= 10 && d >= 8) put(x, y, 255, 255, 255);     // 外圈波纹
+        if (d <= 3.5) put(x, y, 255, 255, 255);              // 中心点
+      }
+    }
+    return nativeImage.createFromBuffer(buf, { width: S, height: S, scaleFactor: 1 });
+  } catch (e) {
+    return nativeImage.createEmpty();
+  }
+}
 function createTray() {
   if (tray) return;
   try {
-    // 优先用打包资源的 tray 图标; 找不到就用空图(避免 macOS 报错)
-    const iconPath = path.join(__dirname, '..', 'mac-screen', 'build', 'tray.png');
-    let img = fs.existsSync(iconPath) ? nativeImage.createFromPath(iconPath) : nativeImage.createEmpty();
+    // 图标优先级: 外部图标文件(便于后续替换成美术图) > 代码内置图标(保证托盘永远有可见图形)
+    const candidates = [
+      path.join(__dirname, 'build', 'tray.png'),                     // 打包后: resources/app.asar/build/tray.png
+      path.join(__dirname, '..', 'mac-screen', 'build', 'tray.png'), // 开发态
+    ];
+    let img = nativeImage.createEmpty();
+    for (const p of candidates) {
+      try {
+        if (p && fs.existsSync(p)) {
+          const t = nativeImage.createFromPath(p);
+          if (!t.isEmpty()) { img = t; break; }
+        }
+      } catch (e) { /* 尝试下一个候选 */ }
+    }
+    if (img.isEmpty()) img = buildTrayIcon();
     if (img.isEmpty()) {
-      // 退化: 用窗口图标
       try { img = win ? win.getIcon() : nativeImage.createEmpty(); } catch (e) {}
     }
     tray = new Tray(img);
@@ -244,11 +281,25 @@ function showFromTray() {
 
 /* ---------------- IPC ---------------- */
 ipcMain.on('quit', () => app.quit());
+/* 收起到托盘后给出明确提示: 托盘图标小且可能被折叠进 ^ , 用户常因此"找不到大屏" */
+function notifyHidden() {
+  if (process.platform !== 'win32' || !tray) return;
+  try {
+    tray.displayBalloon({
+      title: '已收起, 仍在后台接收通知',
+      content: '双击桌面「班级喊话演示屏」图标, 或点击右下角托盘图标, 即可重新打开大屏。',
+    });
+  } catch (e) { /* 部分系统不支持气泡通知, 忽略 */ }
+}
 ipcMain.on('window-minimize', () => {
   if (!win || win.isDestroyed()) return;
   // 改用 hide() 替代 minimize(): 渲染进程不会被 Windows 节流/挂起, socket 长连接保持
   // (配合 server 的 standbyClasses, 即使 socket 后续断开, 教室端仍判在线)
-  const doHide = () => { if (win && !win.isDestroyed()) win.hide(); };
+  const doHide = () => {
+    if (!win || win.isDestroyed()) return;
+    win.hide();
+    notifyHidden();
+  };
   if (win.isFullScreen()) {
     let fired = false;
     const handler = () => {
@@ -310,9 +361,14 @@ if (!app.requestSingleInstanceLock()) {
   });
   app.whenReady().then(() => {
     createWindow();
+    // 兜底出口: 窗口被收进托盘、而用户又找不到托盘图标时, 用 Ctrl/Cmd+Shift+9 把大屏喊回来
+    try {
+      globalShortcut.register('CommandOrControl+Shift+9', () => showFromTray());
+    } catch (e) { console.log('[shortcut] register failed:', e && e.message); }
     app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
   });
   app.on('window-all-closed', () => app.quit());
+  app.on('will-quit', () => { try { globalShortcut.unregisterAll(); } catch (e) { /* 忽略 */ } });
 // 用户从托盘"退出"或 Cmd+Q 时, 允许真正退出进程
 app.on('before-quit', () => { isQuitting = true; });
 }
