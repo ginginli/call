@@ -153,17 +153,19 @@ function loadErrorPage(reason) {
 }
 
 async function boot() {
-  // 先试一次, 失败再重试一次(防教室网络冷启动抖动), 两次都失败才报错
-  if (await isServerUp(serverUrl)) { loadRoom(); return; }
-  await new Promise((r) => setTimeout(r, 800));
-  if (await isServerUp(serverUrl)) { loadRoom(); return; }
   const isDevLocal = !app.isPackaged && isLocalUrl(serverUrl) && fs.existsSync(SERVER_ENTRY);
   if (isDevLocal) {
+    // 开发模式: 用 Node https 探测本机服务, 必要时自动拉起
+    if (await isServerUp(serverUrl)) { loadRoom(); return; }
+    await new Promise((r) => setTimeout(r, 800));
+    if (await isServerUp(serverUrl)) { loadRoom(); return; }
     const r = await startServer();
     if (r.ok) { loadRoom(); return; }
     loadErrorPage(r.reason || '服务不可用');
   } else {
-    loadErrorPage('无法连接服务 ' + serverUrl + '\n请检查教室网络是否能上网, 或在下方填写正确的服务地址。');
+    // 打包后: 直接让 Chromium 加载教室端页面(Chromium 走 no-proxy-server 直连, 避免系统代理干扰)
+    // 加载失败时 did-fail-load 会触发, 届时回退到错误页
+    loadRoom();
   }
 }
 
@@ -188,8 +190,15 @@ function createWindow() {
   win.webContents.on('did-finish-load', () => {
     console.log('[boot] loaded:', win.webContents.getURL());
   });
-  win.webContents.on('did-fail-load', (e, code, desc) => {
+  win.webContents.on('did-fail-load', (e, code, desc, url) => {
     console.log('[boot] load-fail:', code, desc);
+    // 打包后 boot() 直接 loadRoom(), 加载失败时回退到错误页
+    if (app.isPackaged && win && !win.isDestroyed()) {
+      const cur = win.webContents.getURL();
+      if (!cur || cur.includes('/room')) {
+        loadErrorPage('无法连接服务 ' + serverUrl + '\n请检查教室网络是否能上网。');
+      }
+    }
   });
   win.webContents.on('render-process-gone', (e, det) => {
     console.log('[boot] render-gone:', det && det.reason);
